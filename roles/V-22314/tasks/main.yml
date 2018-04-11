@@ -1,0 +1,116 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22314 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22314"
+      rule_id="SV-26365r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All system command files must not have extended ACLs.</title>
+      <discussion>Restricting permissions will protect system command files from unauthorized modification.  System command files include files present in directories used by the operating system for storing default system executables and files present in directories included in the system's default executable search paths.</discussion>
+      <check_content>Verify all system command files have no extended ACLs.
+      # ls -lL /etc /bin /usr/bin /usr/lbin /usr/ucb /sbin /usr/sbin
+      If the permissions include a "+", the file has an extended ACL, this is a finding.</check_content>
+      <fix_text>Remove the extended ACL from the file. 
+      # chmod A- [file with extended ACL]</fix_text>
+
+- name: V-22314 Check
+  shell: ls -lL /etc /bin /usr/bin /usr/lbin /usr/ucb /sbin /usr/sbin 2>/dev/null | awk '$1 ~ /\+/' 
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22314 Check 2
+  shell: ls -lL /etc /bin /usr/bin /usr/lbin /usr/ucb /sbin /usr/sbin 2>/dev/null | awk '$1 ~ /\+/' 
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22314 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22314
+      All system command files must not have extended ACLs.
+      If the permissions include a "+", the file has an extended ACL, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>No files with extended ACLs exist in /etc /bin /usr/bin /usr/lbin /usr/ucb /sbin /usr/sbin</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001499</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22314 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22314
+      All system command files must not have extended ACLs.
+      If the permissions include a "+", the file has an extended ACL, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>Files with extended ACLs exist in /etc /bin /usr/bin /usr/lbin /usr/ucb /sbin /usr/sbin</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-001499</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22314 Fix-1
+  shell: chmod A- "{{item}}"
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

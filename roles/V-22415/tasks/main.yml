@@ -1,0 +1,116 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22415 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22415"
+      rule_id="SV-29603r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>Proxy ARP must not be enabled on the system.</title>
+      <discussion>Proxy ARP allows a system to respond to ARP requests on one interface on behalf of hosts connected to another interface.  If this function is enabled when not required, addressing information may be leaked between the attached network segments.</discussion>
+      <check_content>Determine if the system has non-local published ARP entries.
+
+      Procedure:
+      # arp -a
+
+      If any entries have the flag P and no flag L, they are non-local published entries, and this is a finding.</check_content>
+      <fix_text>Remove non-local published ARP entries from the system.
+
+      Procedure:
+      # arp -d &lt;host&gt;
+
+      Check system initialization files for any commands creating published ARP entries (such as "arp -s &lt;host&gt; &lt;ether&gt; pub" or "arp -f") and removing them.</fix_text>
+      <ccis>
+      <cci>CCI-001551</cci>
+      </ccis>
+
+- name: V-22415 Check
+  shell: arp -a
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22415 Check 2
+  shell: arp -a | awk '$4 ~ /P|L/ && $4 !~ /S/ {print $2}'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22415 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22415
+      Proxy ARP must not be enabled on the system.
+      If any entries have the flag P and no flag L, they are non-local published entries, and this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>No entries have the P flag with the L flag</comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22415 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22415
+      Proxy ARP must not be enabled on the system.
+      If any entries have the flag P and no flag L, they are non-local published entries, and this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>Entries have the P flag with the L flag</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+# - name: V-22415 Fix-1
+#   shell:  arp -d "{{item}}"
+#   with_items: "{{checkmyconf2.stdout_lines}}"
+#   ignore_errors: True
+#   when: (checkmyconf2.stdout != "" and FIX == 1)

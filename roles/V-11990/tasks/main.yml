@@ -1,0 +1,114 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11990 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11990"
+      rule_id="SV-12491r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All public directories must be group-owned by root or an application group.</title>
+      <discussion>If a public directory has the sticky bit set and is not group-owned by a system GID, unauthorized users may be able to modify files created by others.
+
+      The only authorized public directories are those temporary directories supplied with the system or those designed to be temporary file repositories. The setting is normally reserved for directories used by the system and by users for temporary file storage (e.g., /tmp) and for directories requiring global read/write access.</discussion>
+      <check_content>Check the group ownership of public directories.
+
+      Procedure:
+      # find / -type d -perm -1002 -exec ls -ld {} \;
+
+      If any public directory is not group-owned by root, sys, bin, or an application group (such as mail), this is a finding.</check_content>
+      <fix_text>Change the group ownership of the public directory.
+
+      Procedure:
+      # chgrp root /tmp
+
+      (Replace root with a different system group and/or /tmp with a different public directory as necessary.)</fix_text>
+
+
+- name: V-11990 Check
+  shell: cat /root/find.1002 | awk '$4 !~ /^root$|^bin$|^sys$|^mail$|^uucp/ {print $9}'
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11990 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11990
+      All public directories must be group-owned by root or an application group.
+      If any public directory is not group-owned by root, sys, bin, or an application group (such as mail), this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # find  / \( -fstype nfs -o -fstype cachefs -o -fstype autofs    -o -fstype ctfs -o -fstype mntfs -o -fstype objfs    -o -fstype proc \)  -type d -perm -2 -exec ls -ld {} \; | awk '$4 !~ /^root$|^bin$|^sys$/'
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>All public directories are group-owned by root or an application group.</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf1.stdout == "" and REPORT == 1)
+
+- name: V-11990 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11990
+      All public directories must be group-owned by root or an application group.
+      If any public directory is not group-owned by root, sys, bin, or an application group (such as mail), this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # find  / \( -fstype nfs -o -fstype cachefs -o -fstype autofs -o -fstype ctfs -o -fstype mntfs -o -fstype objfs    -o -fstype proc \)  -type d -perm -2 -exec ls -ld {} \; | awk '$4 !~ /^root$|^bin$|^sys$/'
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>NOT All public directories are group-owned by root or an application group.</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf1.stdout != ""

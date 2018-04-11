@@ -1,0 +1,115 @@
+###############################################
+  # Developed For 7.2.4 by Andrew Darley     
+  #     andrew.darley.ctr@navy.mil  
+  #      
+  # Originally created for:
+  # Solaris 10 x86/SPARC Manual STIG - Ver 1
+  # Release: 19 Benchmark Date: 28 Jul 2017
+  # 
+  # This is expected to run with a play book that
+  # defines these variables
+  # output_path
+  # out_file
+  # FIX
+  ###############################################
+  
+  
+- name: V-22407 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22407"
+      rule_id="SV-26618r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The kernel core dump data directory must not have an extended ACL.</title>
+      <discussion>Kernel core dumps may contain the full contents of system memory at the time of the crash.  As the system memory may contain sensitive information, it must be protected accordingly.  If there is an extended ACL for the kernel core dump data directory, unauthorized users may be able to view or to modify kernel core dump data files.</discussion>
+      <check_content>Determine the kernel core dump data directory.
+
+      # dumpadm | grep "Savecore directory"
+      OR
+      # grep DUMPADM_SAVDIR /etc/dumpadm.conf
+
+      Check the kernel core dump data directory permissions.
+      # ls -ld [savecore directory]
+      If the permissions include a "+", the file has an extended ACL and this is a finding.</check_content>
+      <fix_text>Remove the extended ACL from the file.
+      # chmod A- [kernel core dump directory]</fix_text>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+
+
+- name: V-22407 Check
+  shell: grep DUMPADM_SAVDIR /etc/dumpadm.conf | awk "-F=" '{print $2}' | xargs ls -ld
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22407 Check 2
+  shell: grep DUMPADM_SAVDIR /etc/dumpadm.conf | awk "-F=" '{print $2}' | xargs ls -ld | awk '/^\+/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22407 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22407
+      The kernel core dump data directory must not have an extended ACL.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>the dump directory does not have extended ACLs configured</comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22407 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22407
+      The kernel core dump data directory must not have an extended ACL.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>the dump directory does have extended ACLs configured</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22407 Fix
+  shell: chmod A- /var/crash
+  when: (checkmyconf2.stdout != "" and FIX == 1)
+

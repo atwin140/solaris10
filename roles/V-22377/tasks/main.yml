@@ -1,0 +1,122 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22377 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22377"
+      rule_id="SV-40607r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The audit system must be configured to audit account modification.</title>
+      <discussion>If the system is not configured to audit certain activities and write them to an audit log, it is more difficult to detect and track system compromises and damages incurred during a system compromise.</discussion>
+      <check_content>Check the system's audit configuration.
+
+      # grep ua /etc/security/audit_control
+
+      If the ua flag is not set, and both the +ua and -ua flags are not set, this is a finding.
+      If the ua naflag is not set, and both the +ua and -ua naflags are not set, this is a finding.</check_content>
+      <fix_text>Edit /etc/security/audit_control and add ua to the flags list and naflags list.
+      Refresh auditd.
+      # svcadm refresh auditd</fix_text>
+
+- name: V-22377 Check
+  shell: grep ua /etc/security/audit_control
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22377 Check 2
+  shell: grep ua /etc/security/audit_control | awk '/^flags|^naflags/' | wc -l
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22377 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22376 V-22377 V-22378 V-22382
+      The audit system must be configured to audit account creation.
+      If the ua flag is not set, and both the +ua and -ua flags are not set, this is a finding.
+      If the ua naflag is not set, and both the +ua and -ua naflags are not set, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>the ua flag is set</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001403</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "       2" and REPORT == 1)
+
+- name: V-22377 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22376 V-22377 V-22378 V-22382
+      The audit system must be configured to audit account creation.
+      If the ua flag is not set, and both the +ua and -ua flags are not set, this is a finding.
+      If the ua naflag is not set, and both the +ua and -ua naflags are not set, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>the ua flag is set</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001403</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != "       2"
+
+- name: V-22377 Fix-1
+  lineinfile: dest=/etc/security/audit_control state=present regexp=^flags line="flags:am,as,lo,fd,fm,-fr,ua"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "       2" and FIX == 1)
+
+- name: V-22377 Fix-2
+  lineinfile: dest=/etc/security/audit_control state=present regexp=^naflags line="naflags:lo,ua"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "       2" and FIX == 1)

@@ -1,0 +1,119 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22316 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22316"
+      rule_id="SV-26373r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All manual page files must not have extended ACLs.</title>
+      <discussion>If manual pages are compromised, misleading information could be inserted, causing actions that may compromise the system.</discussion>
+      <check_content>Verify all manual page files have no extended ACLs. Check environment variable $MANPATH for full list of manpage locations. 
+      # echo $MANPATH 
+      Check for ACLs, note only a partial list is presented below. 
+      # ls -lLR /usr/share/man /usr/sfw/man /usr/sfw/share/man
+
+      If the permissions include a "+", the file has an extended ACL and this is a finding.</check_content>
+      <fix_text>Remove the extended ACL from the file.
+      # chmod A- [file with extended ACL]</fix_text>
+
+- name: V-22316 Check
+  shell: ls -lLR /usr/share/man /usr/sfw/man /usr/sfw/share/man | awk '$1 ~ /\+/' 
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22316 Check 2
+  shell: ls -lLR /usr/share/man /usr/sfw/man /usr/sfw/share/man | awk '$1 ~ /\+/' 
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22316 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22316
+      All manual page files must not have extended ACLs.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>No manpage files have extended ACLs configured</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22316 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22316
+      All manual page files must not have extended ACLs.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>Manpage files have extended ACLs configured</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22316 Fix-1
+  shell: chmod A- "{{item}}"
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

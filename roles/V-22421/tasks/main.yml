@@ -1,0 +1,59 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22421 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22421"
+      rule_id="SV-42308r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must not be configured for network bridging.</title>
+      <discussion>Some systems have the ability to bridge or switch frames (link-layer forwarding) between multiple interfaces. This can be useful in a variety of situations but, if enabled when not needed, has the potential to bypass network partitioning and security.</discussion>
+      <check_content>Ask the system administrator if network bridging software is installed on the system or the system is configured for network bridging. If network bridging software is installed or the system is configured for network bridging, this is a finding.</check_content>
+      <ccis>
+      <cci>CCI-001551</cci>
+      </ccis>
+
+- name: V-22421 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      None
+      </procedure>
+      <output> 
+      V-22421
+      The system must not be configured for network bridging.
+      If network bridging software is installed or the system is configured for network bridging, this is a finding.
+
+      This server is not setup for bridging.
+
+      -
+      This is NOT a finding
+      -      
+      </output>
+      <comments>Network bridging software is not installed </comments>
+      <status>Not a Finding</status>
+      </finding>
+      

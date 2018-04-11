@@ -1,0 +1,123 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11986 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11986"
+      rule_id="SV-12487r5_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All local initialization files executable search paths must contain only authorized paths.</title>
+      <discussion>The executable search path (typically the PATH environment variable) contains a list of directories for the shell to search to find executables. If this path includes the current working directory or other relative paths, executables in these directories may be executed instead of system commands. This variable is formatted as a colon-separated list of directories. If there is an empty entry, such as a leading or trailing colon, two consecutive colons, or a single period, this is interpreted as the current working directory. Paths starting with a slash (/) are absolute paths.</discussion>
+      <check_content>NOTE: The following must be done in the BASH shell.
+
+      Examine the PATH variable contained in any user's local initialization files using a command shell that supports the use of ~USER as USER's home directory.
+
+      # cat /etc/passwd | cut -f 1,1 -d ":" | xargs -n1 -IUSER sh -c 'grep -i PATH ~USER/.*'
+
+      The PATH variable is a colon-delimited directory list. 
+
+      If there is an empty entry, such as a leading or trailing colon, or two consecutive colons, this is a finding. 
+
+      If an entry begins with a character other than a slash (/), or has not been documented with the ISSO, this is a finding.
+      </check_content>
+      <fix_text>Edit the local initialization file(s) and remove the relative path entries from the PATH variable that have not been documented with the ISSO.   
+
+      Edit the local initialization file(s) and remove any empty entry that is defined.
+      </fix_text>
+
+
+- name: V-11986 Check
+  shell: awk "-F:"  '{print $6 }' /etc/passwd | xargs -n1 -I DIR sh -c 'grep -i PATH DIR/.*' 2>/dev/null | awk '/::|:\/$/'
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11986 Check 2
+  shell: awk "-F:"  '{print $6 }' /etc/passwd | xargs -n1 -I DIR sh -c 'grep -i PATH DIR/.*' 2>/dev/null | awk '/::|:\/$/ && !/bash_history/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11986 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11986
+      All local initialization files' executable search paths must contain only absolute paths.
+      If an empty or relative path is defined in the PATH variable, this is a finding
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Relative paths are not defined in the PATH variable</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-11986 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11986
+      All local initialization files' executable search paths must contain only absolute paths.
+      If an empty or relative path is defined in the PATH variable, this is a finding
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Relative paths are defined in the PATH variable</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+

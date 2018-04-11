@@ -1,0 +1,125 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22325 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22325"
+      rule_id="SV-26412r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The /etc/hosts file must have mode 0644 or less permissive.</title>
+      <discussion>The /etc/hosts file (or equivalent) configures local host name to IP address mappings that typically take precedence over DNS resolution.  If this file is maliciously modified, it could cause the failure or compromise of security functions requiring name resolution, which may include time synchronization, centralized authentication, and remote system logging.</discussion>
+      <check_content>Check the mode of the /etc/hosts file.
+
+      Procedure:
+      # ls -l /etc/hosts
+      If the file mode is more permissive than 0644, this is a finding.</check_content>
+      <fix_text>Change the mode of the /etc/hosts file to 0644 or less permissive.
+
+      # chmod 0644 /etc/hosts</fix_text>
+
+- name: V-22325 Check
+  shell: ls -lL /etc/hosts | awk '($1 ~ /\+/) || ($1 !~ /-rw-r--r--/) || ($3 !~ /root/) || ($4 !~ /root|bin|sys/)'
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22325 Check 2
+  shell: ls -lL /etc/hosts | awk '($1 ~ /\+/) || ($1 !~ /-rw-r--r--/) || ($3 !~ /root/) || ($4 !~ /root|bin|sys/)'
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22325 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22325
+      The /etc/hosts file must have mode 0644 or less permissive.
+
+      If the file mode is more permissive than 0644, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/etc/hosts is not more permissive than 0644</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+      
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22325 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22325
+      The /etc/hosts file must have mode 0644 or less permissive.
+
+      If the file mode is more permissive than 0644, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>/etc/hosts is more permissive than 0644</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22325 Fix-1
+  file: path=/etc/hosts group=root owner=root mode=0644 
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

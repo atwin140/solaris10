@@ -1,0 +1,120 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11996 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11996"
+      rule_id="SV-27400r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>Process core dumps must be disabled unless needed.</title>
+      <discussion>Process core dumps contain the memory in use by the process when it crashed.  Process core dump files can be of significant size and their use can result in file systems filling to capacity, which may result in Denial of Service.  Process core dumps can be useful for software debugging.  </discussion>
+      <check_content>Check the process core dump configuration.
+      # coreadm |grep enabled
+      OR
+      # egrep "COREADM_.*_ENABLED" /etc/coreadm.conf.
+
+      If any lines are returned by coreadm or if any lines are not set to no in /etc/coreadm.conf, this is a finding.
+
+      # grep coredumpsize /etc/system
+      If the value is 1, this is a finding.</check_content>
+      <fix_text>Change the process core dump configuration.
+      # coreadm -d global
+      # coreadm -d process
+      # coreadm -d global-setid
+      # coreadm -d proc-setid
+      # coreadm -d log
+
+      Edit /etc/system and remove the coredumpsize parameter.</fix_text>
+
+- name: V-11996 Check
+  shell: coreadm | awk '/enabled/'
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11996 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+        <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+        </procedure>
+        <output> 
+        V-11996
+        Process core dumps must be disabled unless needed.
+        If any lines are returned by coreadm or if any lines are not set to no in /etc/coreadm.conf, this is a finding.
+
+        <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} 
+        OUTPUT:
+        ->  {{ checkmyconf1.stdout }}
+        ]]>-
+        This is NOT a finding
+        -
+        </output>
+        <comments>Core dumps are not enabled</comments>
+        <status>Not a Finding</status>
+        <ccis>
+        <cci>CCI-000366</cci>
+        </ccis>
+        </finding>
+  when: (checkmyconf1.stdout == "" and REPORT == 1)
+
+- name: V-11996 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+        <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+        </procedure>
+        <output> 
+        V-11996
+        Process core dumps must be disabled unless needed.
+        If any lines are returned by coreadm or if any lines are not set to no in /etc/coreadm.conf, this is a finding.
+
+        <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} 
+        OUTPUT:
+        ->  {{ checkmyconf1.stdout }}
+        ]]>====================================================================
+        This is a FINDING
+        -
+        </output>
+        <comments>Core dumps are enabled</comments>
+        <status>Ongoing</status>
+        <ccis>
+        <cci>CCI-000366</cci>
+        </ccis>
+        </finding>
+  when: checkmyconf1.stdout != ""
+
+- name: V-11996 Fix
+  shell: coreadm -d global; coreadm -d process; coreadm -d global-setid; coreadm -d proc-setid; coreadm -d log;
+  when: (checkmyconf1.stdout != "" and FIX == 1)

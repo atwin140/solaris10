@@ -1,0 +1,118 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22394 Check
+  shell: ls -lL /etc/cron.d/cron.deny 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22394 Check 2
+  stat: path=/etc/cron.d/cron.deny
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22394 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding 
+      v_id="V-22394"
+      rule_id="SV-26563r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The cron.deny file must be group-owned by root, bin, or sys.</title>
+      <discussion>Cron daemon control files restrict the scheduling of automated tasks and must be protected.  Unauthorized modification of the cron.deny file could result in Denial of Service to authorized cron users or could provide unauthorized users with the ability to run cron jobs.</discussion>
+      <check_content>Check the group ownership of the file.
+
+      Procedure:
+      # ls -lL /etc/cron.d/cron.deny
+
+      If the file is not group-owned by root, bin, or sys,  this is a finding.</check_content>
+      <fix_text>Change the group ownership of the file to root, sys, or bin.
+
+      Procedure:
+      # chgrp root /etc/cron.d/cron.deny</fix_text>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+
+- name: V-22394 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+        <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+        </procedure>
+        <output> 
+        V-22394
+        The cron.deny file must be group-owned by root, bin, or sys.
+        If the file is not group-owned by root, bin, or sys,  this is a finding.
+
+        <![CDATA[
+        OUTPUT:
+        ->  {{ checkmyconf1.stdout }}
+        ]]>-
+        This is NOT a finding
+        -
+        </output>
+        <comments>/etc/cron.d/cron.deny is group owned by root</comments>
+        <status>Not a Finding</status>
+        </finding>
+  when: checkmyconf2.stat.gid == 0
+
+
+        
+- name: V-22394 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+        <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+        </procedure>
+        <output> 
+        V-22394
+        The cron.deny file must be group-owned by root, bin, or sys.
+        If the file is not group-owned by root, bin, or sys,  this is a finding.
+        
+        <![CDATA[
+        OUTPUT:
+        ->  {{ checkmyconf1.stdout }}
+        ]]>====================================================================
+        This is a FINDING
+        -
+        </output>
+        <comments>/etc/cron.d/cron.deny is NOT group owned by root</comments>
+        <status>Ongoing</status>
+        </finding>
+  when: checkmyconf2.stat.gid != 0
+
+- name: V-22394 Fix-1
+  ignore_errors: True
+  when: (checkmyconf2.stat.gid != 0 and FIX == 1)
+  file: path=/etc/cron.d/cron.deny group=root owner=root state=file
+

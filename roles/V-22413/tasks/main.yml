@@ -1,0 +1,162 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22413 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22413"
+      rule_id="SV-29709r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must prevent local applications from generating source-routed packets.</title>
+      <discussion>Source-routed packets allow the source of the packet to suggest that routers forward the packet along a different path than configured on the router, which can be used to bypass network security measures.</discussion>
+      <check_content>Check the system for an IPF rule blocking outgoing source-routed packets.
+
+      Procedure:
+      # ipfstat -o 
+
+      Examine the list for rules such as:
+      block out log quick all with opt lsrr
+      block out log quick all with opt ssrr
+
+      If the listed rules do not block both lsrr and ssrr options, this is a finding.</check_content>
+      <fix_text>Edit /etc/ipf/ipf.conf and add rules to block outgoing source-routed packets, such as: 
+
+      block out log quick all with opt lsrr
+      block out log quick all with opt ssrr
+
+      Reload the IPF rules.
+      Procedure:
+
+      # ipf -Fa -A -f /etc/ipf/ipf.conf</fix_text>
+      <ccis>
+      <cci>CCI-001551</cci>
+      </ccis>
+
+- name: V-22413 Check
+  shell: if [ $(zonename) = 'global' ];    then if [ -z $(dladm show-link | awk '/insufficient/') ];        then ipfstat -o | awk '/block out log/';        else 'This system '`zonename`' does not meet the requirement';      fi;    else echo 'This isa zone and not applicable '`zonename`;   fi
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22413 Check 2
+  shell: if [ $(zonename) = 'global' ];    then if [ -z $(dladm show-link | awk '/insufficient/') ];        then ipfstat -o | awk '/block out log/';        else 'This system '`zonename`' does not meet the requirement';      fi;    else echo 'This isa zone and not applicable '`zonename`;   fi | awk '!/block out log|zone and not applicable/'
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22413 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22413
+      The system must prevent local applications from generating source-routed packets.
+      If the listed rules do not block both lsrr and ssrr options, this is a finding.
+      block out log quick all with opt lsrr 
+      block out log quick all with opt ssrr
+
+      Procedure:
+      #  if [ $(zonename) = 'global' ];
+        # then if [ -z $(dladm show-link | awk '/insufficient/') ];
+        #    then ipfstat -i | awk '/block out log quick all with opt/'
+        #    else 'This system '`zonename`' does not meet the requirement';
+        #  fi;
+        # else echo 'This is a zone and not applicable '`zonename`;
+      # fi
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>the listed rules  block both lsrr and ssrr options</comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22413 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22413
+      The system must prevent local applications from generating source-routed packets.
+      If the listed rules do not block both lsrr and ssrr options, this is a finding.
+      block out log quick all with opt lsrr 
+      block out log quick all with opt ssrr
+
+      Procedure:
+      #  if [ $(zonename) = 'global' ];
+        # then if [ -z $(dladm show-link | awk '/insufficient/') ];
+        #    then ipfstat -i | awk '/block out log quick all with opt/'
+        #    else 'This system '`zonename`' does not meet the requirement';
+        #  fi;
+        # else echo 'This is a zone and not applicable '`zonename`;
+      # fi
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>the listed rules  block both lsrr and ssrr options</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+
+- name: V-22413 Fix-1
+  lineinfile: dest=/etc/ipf/ipf.conf state=present regexp="block out log quick all with opt lsrr" line="block out log quick all with opt lsrr"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)
+
+- name: V-22413 Fix-2
+  lineinfile: dest=/etc/ipf/ipf.conf state=present regexp="block out log quick all with opt ssrr" line="block out log quick all with opt ssrr"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)
+
+- name: V-22413 Fix-3
+  shell:  ipf -Fa -A -f /etc/ipf/ipf.conf
+  args:
+    executable: /bin/bash
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)
+

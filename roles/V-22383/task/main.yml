@@ -1,0 +1,111 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22383 Check
+  shell: grep flags /etc/security/audit_control
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22383 Check 2
+  shell: grep flags /etc/security/audit_control 2>/dev/null | awk '/as/'
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22383 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding 
+      v_id="V-22383"
+      rule_id="SV-26524r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The audit system must be configured to audit the loading and unloading of dynamic kernel modules.</title>
+      <discussion>Actions concerning dynamic kernel modules must be recorded as they are substantial events.  Dynamic kernel modules can increase the attack surface of a system.  A malicious kernel module can be used to substantially alter the functioning of a system, often with the purpose of hiding a compromise from the SA.</discussion>
+      <check_content>Check /etc/security/audit_control file. 
+      # grep flags /etc/security/audit_control
+      If the as element is missing from the flags line, this is a finding.</check_content>
+      <fix_text>Edit /etc/security/audit_control and add the as flag to the flag parameter.</fix_text>
+      <ccis>
+      <cci>CCI-000126</cci>
+      </ccis>
+
+- name: V-22383 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22383
+      The audit system must be configured to audit the loading and unloading of dynamic kernel modules.
+      If the "as" element is missing from the flags line, this is a finding.
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>The element "as" is included in the audit flags </comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+        
+- name: V-22383 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22383
+      The audit system must be configured to audit the loading and unloading of dynamic kernel modules.
+      If the "as" element is missing from the flags line, this is a finding.
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>The element "as" is included in the audit flags </comments>
+      <status>Not a Finding</status>
+      </finding>      
+  when: checkmyconf2.stdout == ""
+
+- name: V-22383 Fix-1
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)
+  lineinfile: dest=/etc/security/audit_control state=present regexp=^flags line="flags:am,as,lo,fd,fm,-fr,ua"
+

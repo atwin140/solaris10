@@ -1,0 +1,74 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11946 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11946"
+      rule_id="SV-12447r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>UIDs reserved for system accounts must not be assigned to non-system accounts.</title>
+      <discussion>Reserved UIDs are typically used by system software packages. If non-system accounts have UIDs in this range, they may conflict with system software, possibly leading to the user having permissions to modify system files.
+      </discussion>
+      <check_content>Check the UID assignments of all accounts.
+      # more /etc/passwd
+
+      Confirm all accounts with a UID of 99 and below are used by a system account. If a UID reserved for system accounts (0 - 99) is used by a non-system account, this is a finding. </check_content>
+      <fix_text>Change the UID numbers for non-system accounts with reserved UIDs (those less or equal to 99).   </fix_text>
+
+
+
+- name: V-11946 Check
+  shell: awk "-F:" '$3 <= 99 {print $1} ' /etc/passwd 
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11946 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure><![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output>
+      V-11946
+      UIDs reserved for system accounts must not be assigned to non-system accounts.
+      Confirm all accounts with a UID of 99 and below are used by a system account. If a UID reserved for system accounts (0 - 99) is used by a non-system account, this is a finding. 
+      <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>All UIDs of 99 and lower are used by system accounts.</comments>
+      <status>Not a Finding</status>
+      <ccis>
+        <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+     

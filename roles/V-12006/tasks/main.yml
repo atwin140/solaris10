@@ -1,0 +1,125 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12006 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12006"
+      rule_id="SV-42309r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The SMTP service HELP command must not be enabled.</title>
+      <discussion>The HELP command should be disabled to mask version information. The version of the SMTP service software could be used by attackers to target vulnerabilities present in specific software versions.</discussion>
+      <check_content>Check if Help is disabled in Sendmail.
+
+      Procedure:
+      # telnet &lt;host&gt; 25
+      &gt; help
+
+      If the help command returns any Sendmail version information, this is a finding.
+
+      If telnet is unavailable for testing, check the value of the HelpFile parameter in the sendmail.cf file.
+
+      # grep HelpFile /etc/mail/sendmail.cf
+
+      If the contents of the file indicated by the HelpFile parameter contains any Sendmail version information, this is a finding.</check_content>
+      <fix_text>To disable the SMTP HELP command, clear the Sendmail help file.
+      # echo &gt; /etc/mail/helpfile</fix_text>
+
+- name: V-12006 Check
+  shell: "{ echo 'help'; sleep 1; } | telnet localhost 25 2>&1"
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12006 Check 2
+  shell: "{ echo 'help'; sleep 1; } | telnet localhost 25 2>/dev/null | awk '/HELP not implemented|Connection refused/'"
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12006 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12006
+      The SMTP service HELP command must not be enabled.
+      If the help command returns any Sendmail version information, this is a finding. 
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>HELP is not configured for sendmail</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-12006 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12006
+      The SMTP service HELP command must not be enabled.
+      If the help command returns any Sendmail version information, this is a finding. 
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>HELP is configured for sendmail</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-12006 Fix-1
+  shell:  echo > /etc/mail/helpfile
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)

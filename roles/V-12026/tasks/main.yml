@@ -1,0 +1,75 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12026 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12026"
+      rule_id="SV-12527r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>NIS maps must be protected through hard-to-guess domain names.</title>
+      <discussion>The use of hard-to-guess NIS domain names provides additional protection from unauthorized access to the NIS directory information.</discussion>
+      <check_content>Check the domain name for NIS maps.
+
+      Procedure:
+      # domainname
+
+      If the name returned is simple to guess, such as the organization name, building, or room name, etc., this is a finding.</check_content>
+      <fix_text>Change the NIS domain name to a value difficult to guess.  Consult vendor documentation for the required procedure.</fix_text>
+
+- name: V-12026 Check
+  shell: domainname
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12026 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12026
+      NIS maps must be protected through hard-to-guess domain names.
+      If the name returned is simple to guess, such as the organization name, building, or room name, etc., this is a finding.
+
+      NIS is not used in our enviroment.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>NIS is not configured</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>

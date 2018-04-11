@@ -1,0 +1,115 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22326 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22326"
+      rule_id="SV-26415r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The /etc/hosts file must not have an extended ACL.</title>
+      <discussion>The /etc/hosts file (or equivalent) configures local host name to IP address mappings that typically take precedence over DNS resolution.  If this file is maliciously modified, it could cause the failure or compromise of security functions requiring name resolution, which may include time synchronization, centralized authentication, and remote system logging.</discussion>
+      <check_content>Verify /etc/hosts has no extended ACL.
+      # ls -lL /etc/hosts
+      If the permissions include a "+", the file has an extended ACL and this is a finding.</check_content>
+      <fix_text>Remove the extended ACL from the file.
+      # chmod A- /etc/hosts</fix_text>
+
+- name: V-22326 Check
+  shell: ls -lL /etc/hosts
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22326 Check 2
+  shell: ls -lL /etc/hosts | awk '$1 ~ /\+/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22326 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22326
+      The /etc/hosts file must not have an extended ACL.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>There are not extended ACLs on /etc/hosts</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22326 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22326
+      The /etc/hosts file must not have an extended ACL.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>There are extended ACLs on /etc/hosts</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22326 Fix-1
+  shell:  chmod A- /etc/hosts
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

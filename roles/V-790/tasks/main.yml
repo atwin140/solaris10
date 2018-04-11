@@ -1,0 +1,114 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-790 Check
+  shell: ls -lRa /usr/lib/netsvc/yp /var/yp
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-790 Check 2
+  shell: find /usr/lib/netsvc/yp /var/yp -exec ls -ld {} \; | awk '$3 !~ /root|sys|bin/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-790 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-790"
+      rule_id="SV-27171r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>NIS/NIS+/yp files must be group-owned by root, sys, or bin.</title>
+      <discussion>NIS/NIS+/yp files are part of the system's identification and authentication processes and are, therefore, critical to system security.  Failure to give ownership of sensitive files or utilities to root or bin provides the designated owner and unauthorized users with the potential to access sensitive information or change the system configuration which could weaken the system's security posture.
+      </discussion>
+      <check_content>Perform the following to check NIS file ownership.
+      # ls -lRa /usr/lib/netsvc/yp /var/yp
+      If the file group owner is not root, sys, or bin, this is a finding.</check_content>
+      <fix_text>Change the group owner of the NIS files to root, bin, or sys.
+
+      Procedure:
+      # chgrp -R root /usr/lib/netsvc/yp /var/yp</fix_text>
+
+- name: V-790 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+      Procedure: 
+      # ls -lRa /usr/lib/netsvc/yp /var/yp
+      </procedure>
+      <output>
+      V-790
+      NIS/NIS+/yp files must be group-owned by root, sys, or bin.
+      If the file ownership is not root, sys, or bin, this is a finding.
+      Procedure:
+      # ls -lRa /usr/lib/netsvc/yp /var/yp
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>NIS file group ownership is root</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-790 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+      Procedure: 
+      # ls -lRa /usr/lib/netsvc/yp /var/yp
+      </procedure>
+      <output>
+      V-790
+      NIS/NIS+/yp files must be group-owned by root, sys, or bin.
+      If the file ownership is not root, sys, or bin, this is a finding.
+      Procedure:
+      # ls -lRa /usr/lib/netsvc/yp /var/yp
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>NIS file group ownership is Not root</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-790 Fix-1
+  file: path="{{item}}" group=root
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  when: (checkmyconf2.stdout != "" and FIX == 1)

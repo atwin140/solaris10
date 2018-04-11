@@ -1,0 +1,119 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12004 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12004"
+      rule_id="SV-12505r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must log authentication informational data.</title>
+      <discussion>Monitoring and recording successful and unsuccessful logins assists in tracking unauthorized access to the system.</discussion>
+      <check_content>Check /etc/syslog.conf and verify the auth facility is logging both the notice and info level messages by using one of the procedures below.
+
+      # grep "auth.notice" /etc/syslog.conf
+      # grep "auth.info" /etc/syslog.conf
+      OR
+      # grep 'auth.*' /etc/syslog.conf
+
+      If auth.* is not found, and either auth.notice or auth.info is not found, this is a finding.</check_content>
+      <fix_text>Edit /etc/syslog.conf and add local log destinations for auth.* or both auth.notice and auth.info.</fix_text>
+
+- name: V-12004 Check
+  shell: grep 'auth.*' /etc/syslog.conf | awk '/auth.notice|auth.info/ && !/^#/' 2>&1
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12004 Check 2
+  shell: grep 'auth.*' /etc/syslog.conf | awk '/auth.notice|auth.info/ && !/^#/' 2>/dev/null
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12004 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12004
+      The system must log authentication informational data.
+      If auth.* is not found, and either auth.notice or auth.info is not found, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>auth.info and auth.notice are configured in /etc/syslog.conf</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000126</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-12004 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12004
+      The system must log authentication informational data.
+      If auth.* is not found, and either auth.notice or auth.info is not found, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>auth.info and auth.notice are NOT configured in /etc/syslog.conf</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000126</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-12004 Fix-1
+  lineinfile: dest=/etc/syslog.conf state=present regexp=^auth.info line="auth.info                                       /var/adm/authinfo.log"
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)

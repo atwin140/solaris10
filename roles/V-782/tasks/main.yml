@@ -1,0 +1,85 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-782 Check
+  shell: ps -ef | awk '/HipClient-bin|cma|auditmanager/' | awk ' !/awk/'
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-782 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-782"
+      rule_id="SV-41526r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must have a host-based intrusion detection tool installed.</title>
+      <discussion>Without a host-based intrusion detection tool, there is no system-level defense when an intruder gains access to a system or network.  Additionally, a host-based intrusion detection tool can provide methods to immediately lock out detected intrusion attempts.</discussion>
+      <check_content>Ask the SA or IAO if a host-based intrusion detection application is loaded on the system.
+
+      Determine if the application is loaded on the system.
+
+      Procedure:
+      # find / -name &lt;daemon name&gt; -print 
+
+
+
+      Determine if the application is active on the system.
+
+      Procedure:
+      # ps -ef | grep &lt;daemon name&gt; 
+
+      If no host-based intrusion detection system is installed on the system, this is a finding.
+      </check_content>
+      <fix_text>Install a host-based intrusion detection tool.
+      </fix_text> 
+
+- name: V-782 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+      Procedure: 
+      # ps -ef | awk '/HipClient-bin|cma|auditmanager/' | awk ' !/awk/'
+      </procedure>
+      <output>
+      V-782
+      The system must have a host-based intrusion detection tool installed.
+      If no host-based intrusion detection system is installed on the system, this is a finding.
+      Procedure:
+      # ps -ef | awk '/HipClient-bin|cma|auditmanager/' | awk ' !/awk/'
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      -
+      HBSS is not ported for Solaris 10 X86
+      We use Tripwire to meet this requiremet
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>HBSS/HIPS is loaded on the system</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001259</cci>
+      </ccis>
+      </finding>  

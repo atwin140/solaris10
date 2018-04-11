@@ -1,0 +1,146 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22290 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22290"
+      rule_id="SV-26291r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system clock must be synchronized continuously.</title>
+      <discussion>A synchronized system clock is critical for the enforcement of time-based policies and the correlation of logs and audit records with other systems.  Internal system clocks tend to drift and require periodic resynchronization to ensure their accuracy.  Software, such as NTPD, can be used to continuously synchronize the system clock with authoritative sources.  Alternatively, the system may be synchronized periodically, with a maximum of one day between synchronizations.
+
+      If the system is completely isolated (no connections to networks or other systems), time synchronization is not required as no correlation of events or operation of time-dependent protocols between systems will be necessary. If the system is completely isolated, this requirement is not applicable.</discussion>
+      <check_content>NTP must be used and used only in the global zone.  Determine the type of zone that you are currently securing.
+
+      # zonename
+
+      If the command output is not "global", then NTP must be disabled.  Check the system for a running NTP daemon.
+
+      # svcs -Ho state ntp
+
+      If NTP is online, this is a finding.
+
+      If the output from "zonename" is "global", then NTP must be enabled.  Check the system for a running NTP daemon.
+
+      # svcs -Ho state ntp
+
+      If NTP is not online, this is a finding.</check_content>
+      <fix_text>Determine the type of zone that you are currently securing.
+
+      # zonename
+
+      If the command output is not "global", then NTP must be disabled.
+
+      # svcadm disable ntp
+
+      If the output from "zonename" is "global", then NTP must be enabled.  
+
+      # svcadm enable ntp</fix_text>
+
+- name: V-22290 Check
+  shell: if [ $(zonename) = "global" ]; then svcs -Ho state ntp; else echo 'This system '`zonename`' does not meet the requirement'; fi
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22290 Check 2
+  shell: if [ $(zonename) = "global" ]; then svcs -Ho state ntp; else echo 'This system '`zonename`' does not meet the requirement'; fi | awk '!/online|does not meet the requirement/'
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22290 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22290
+      The system clock must be synchronized continuously.
+      If the command output is not "global", then NTP must be disabled. Check the system for a running NTP daemon.
+      If NTP is not online, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>NTP is set up as a service</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22290 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22290
+      The system clock must be synchronized continuously.
+      If the command output is not "global", then NTP must be disabled. Check the system for a running NTP daemon.
+      If NTP is not online, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>NTP is set up as a service</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22290 Fix-1
+  shell:  svcadm enable ntp
+  args:
+    executable: /bin/bash
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

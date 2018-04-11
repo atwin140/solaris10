@@ -1,0 +1,121 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22313 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22313"
+      rule_id="SV-26361r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All network services daemon files must not have extended ACLs.</title>
+      <discussion>Restricting permission on daemons will protect them from unauthorized modification and possible system compromise.</discussion>
+      <check_content>Verify network services daemon files have no extended ACLs.
+      # ls -la /usr/sbin
+      # ls -la /usr/bin
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+      NOTE: Network daemons not residing in these directories (such as httpd or sshd) must also be checked for the correct permissions.
+
+      A way to locate network daemons, such as httpd and sshd, is with the ps command.
+      # ps -ef | egrep '(sshd|httpd)'</check_content>
+      <fix_text>Remove the extended ACL from the file.
+      # chmod A- [file with extended ACL]</fix_text>
+
+- name: V-22313 Check
+  shell: ls -la /usr/sbin | awk '/\+/'; ls -la /usr/sbin | awk '/\+/'
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22313 Check 2
+  shell: ls -la /usr/sbin | awk '/\+/'; ls -la /usr/sbin | awk '/\+/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22313 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22313
+      All network services daemon files must not have extended ACLs.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>There are not extended ACLs in /usr/bin or /usr/sbin</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22313 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22313
+      All network services daemon files must not have extended ACLs.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>There are extended ACLs in /usr/bin or /usr/sbin</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22313 Fix-1
+  shell:  chmod A- "{{item}}"
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

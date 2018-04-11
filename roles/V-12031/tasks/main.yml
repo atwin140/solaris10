@@ -1,0 +1,121 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12031 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12031"
+      rule_id="SV-12532r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The nosuid option must be configured in the /etc/rmmount.conf file.</title>
+      <discussion>The rmmount.conf file controls the mounting of removable media on a Solaris system. Removable media is not to be trusted with privileged access, and therefore the filesystems must be mounted with the nosuid option, which prevents any executables with the setuid bit set on this filesystem from running with owner privileges.</discussion>
+      <check_content># grep mount /etc/rmmount.conf
+
+      Confirm the nosuid option is configured.
+
+      mount * hsgs udgs ufs -o nosuid
+
+      If the nosuid option is not configured in the /etc/rmmount.conf file, this is a finding.
+
+      </check_content>
+      <fix_text>Edit /etc/rmmount.conf and add the nosuid mount option to the configuration.</fix_text>
+
+- name: V-12031 Check
+  shell: "awk '/^mount/' /etc/rmmount.conf"
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12031 Check 2
+  shell: "awk '/nosuid/' /etc/rmmount.conf"
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+ 
+- name: V-12031 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12031
+      The nosuid option must be configured in the /etc/rmmount.conf file.
+      If the nosuid option is not configured in the /etc/rmmount.conf file, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>The nosuid option is configured</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout != "" and checkmyconf3.stdout == "       2" and REPORT == 1)
+
+- name: V-12031 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12031
+      The nosuid option must be configured in the /etc/rmmount.conf file.
+      If the nosuid option is not configured in the /etc/rmmount.conf file, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>The nosuid option is configured</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: ( checkmyconf2.stdout == "" or checkmyconf3.stdout != "       2" )

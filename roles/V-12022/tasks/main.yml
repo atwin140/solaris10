@@ -1,0 +1,143 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12022 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12022"
+      rule_id="SV-40279r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The SSH daemon must be configured for IP filtering.</title>
+      <discussion>The SSH daemon must be configured for IP filtering to provide a layered defense against connection attempts from unauthorized addresses.</discussion>
+      <check_content>Check the TCP wrappers configuration files to determine if SSHD is configured to use TCP wrappers.
+
+      Procedure:
+      # egrep '^[^#:]*(ALL|sshd)' /etc/hosts.deny
+      # egrep '^[^#:]*(ALL|sshd)' /etc/hosts.allow
+
+      If neither of the hosts.deny or hosts.allow files exist, this is a finding.
+      If no entries are returned, the TCP wrappers are not configured for SSHD, this is a finding.</check_content>
+      <fix_text>Add appropriate IP restrictions for SSH to the /etc/hosts.deny and/or /etc/hosts.allow files.</fix_text>
+
+
+- name: V-12022 Check
+  shell: egrep '^[^#:]*(ALL|sshd)' /etc/hosts.deny 2>&1; egrep '^[^#:]*(ALL|sshd)' /etc/hosts.allow  2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12022 Check 2
+  shell: "egrep '^[^#:]*(ALL|sshd)' /etc/hosts.deny | awk '/ALL: ALL/'"
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+ 
+- name: V-12022 Check 3
+  shell: "egrep '^[^#:]*(ALL|sshd)' /etc/hosts.allow | awk '/sshd:   ALL/'"
+  args:
+    executable: /bin/bash
+  register: checkmyconf3
+  ignore_errors: True
+  changed_when: False
+
+
+- name: V-12022 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12022
+      The SSH daemon must be configured for IP filtering.
+      If neither of the hosts.deny or hosts.allow files exist, this is a finding.
+
+      If no entries are returned, the TCP wrappers are not configured for SSHD, this is a finding
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/etc/hosts.deny and /etc/hosts.allow are configured to limit access </comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout != "" and checkmyconf3.stdout != "" and REPORT == 1)
+
+- name: V-12022 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12022
+      The SSH daemon must be configured for IP filtering.
+      If neither of the hosts.deny or hosts.allow files exist, this is a finding.
+
+      If no entries are returned, the TCP wrappers are not configured for SSHD, this is a finding
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>/etc/hosts.deny and /etc/hosts.allow are NOT configured to limit access </comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" or checkmyconf3.stdout == "")
+
+- name: V-12022 Fix-1
+  lineinfile: "dest=/etc/hosts.deny state=present regexp='ALL: ALL' line='ALL: ALL'"
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)
+
+- name: V-12022 Fix-2
+  lineinfile: "dest=/etc/hosts.allow state=present regexp='sshd:   ALL' line='sshd:   ALL'"
+  ignore_errors: True
+  when: (checkmyconf3.stdout == "" and FIX == 1)
+

@@ -1,0 +1,114 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22350 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22350"
+      rule_id="SV-26451r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>User's home directories must not have extended ACLs.</title>
+      <discussion>Excessive permissions on home directories allow unauthorized access to user's files.</discussion>
+      <check_content>Verify user's home directories have no extended ACLs.
+
+      # cut -d : -f 6 /etc/passwd | xargs -n1 ls -ld 
+
+      If the permissions include a "+", the file has an extended ACL, this is a finding.</check_content>
+      <fix_text>Remove the extended ACL from the file.
+      # chmod A- [user home directory with extended ACL]</fix_text>
+
+- name: V-22350 Check
+  shell: awk "-F:" '{print $6}' /etc/passwd | xargs -n1 ls -ld
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22350 Check 2
+  shell: awk "-F:" '{print $6}' /etc/passwd | xargs -n1 ls -ld | awk '$1 ~ /\+/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22350 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22350
+      User's home directories must not have extended ACLs.
+      If the permissions include a "+", the file has an extended ACL, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Home directories do not have extended ACLs configured</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22350 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22350
+      User's home directories must not have extended ACLs.
+      If the permissions include a "+", the file has an extended ACL, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>Home directories DO have extended ACLs configured</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22350 Fix-1
+  shell:  chmod A- "{{item}}"
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

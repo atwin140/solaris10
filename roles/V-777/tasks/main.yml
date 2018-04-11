@@ -1,0 +1,119 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-777 Check
+  shell: echo $PATH | sed 's/ /\\ /g' | tr ':' '\n'
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-777 Check 2
+  shell: ls -la "{{item}}" 
+  with_items: "{{checkmyconf1.stdout_lines}}"
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-777 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-777"
+      rule_id="SV-37075r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The root account must not have world-writable directories in its executable search path.</title>
+      <discussion>If the root search path contains a world-writable directory, malicious software could be placed in the path by intruders and/or malicious users and inadvertently run by root with all of root's privileges.
+      </discussion>
+      <check_content>Check for world-writable permissions on all directories in the root user's executable search path. Procedure (on multiple lines): 
+
+      # echo $PATH | sed 's/ /\\ /g; s/:/
+      /g' | xargs ls -ld
+
+      If any of the directories in the PATH variable are world-writable, this is a finding.</check_content>
+      <fix_text>For each world-writable path in root's executable search path, perform one of the following.
+
+      1. Remove the world-writable permission on the directory.
+      Procedure:
+      # chmod o-w &lt;path&gt;
+
+      2. Remove the world-writable directory from the executable search path.
+
+      Procedure:
+      Identify and edit the initialization file referencing the world-writable directory and remove it from the PATH variable.   </fix_text>
+
+- name: V-777 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+      Procedure: 
+      # echo $PATH | sed 's/ /\\ /g' | tr ':' '\n'
+      </procedure>
+      <output>
+      V-777
+      The root account must not have world-writable directories in its executable search path.
+      If any of the directories in the PATH variable are world-writable, this is a finding.
+      Procedure:
+      # echo $PATH | sed 's/ /\\ /g' | tr ':' '\n'
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}  
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>There are no world writeable permissions on the directories in the PATH variable</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf1.stdout != "" and REPORT == 1)
+
+- name: V-777 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+      Procedure: 
+      # echo $PATH | sed 's/ /\\ /g' | tr ':' '\n'
+      </procedure>
+      <output>
+      V-777
+      The root account must not have world-writable directories in its executable search path.
+      If any of the directories in the PATH variable are world-writable, this is a finding.
+      Procedure:
+      # echo $PATH | sed 's/ /\\ /g' | tr ':' '\n'
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}  
+      ====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>There are no world writeable permissions on the directories in the PATH variable </comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf1.stdout == ""

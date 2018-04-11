@@ -1,0 +1,114 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-776 Check
+  shell: echo $PATH |awk "-F:" '!/^\//'
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-776 Check 2
+  shell: echo $PATH |awk "-F:" '!/^\//'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-776 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-776"
+      rule_id="SV-776r4_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The root accounts executable search path must contain only authorized paths.</title>
+      <discussion>The executable search path (typically the PATH environment variable) contains a list of directories for the shell to search to find executables. If this path includes the current working directory or other relative paths, executables in these directories may be executed instead of system commands. This variable is formatted as a colon-separated list of directories. If there is an empty entry, such as a leading or trailing colon, two consecutive colons, or a single period, this is interpreted as the current working directory. Entries starting with a slash (/) are absolute paths.</discussion>
+      <check_content>To view the root user's PATH, log in as the root user, and execute the following.
+      # env | grep PATH
+
+      This variable is formatted as a colon-separated list of directories. 
+
+      If there is an empty entry, such as a leading or trailing colon or two consecutive colons, this is a finding. 
+
+      If an entry begins with a character other than a slash (/), or has not been documented with the ISSO, this is a finding.
+      </check_content>
+      <fix_text>Edit the root user's local initialization files. Remove any empty path entries. Remove any relative path entries that have not been documented with the ISSO.
+
+      Edit the root user’s local initialization files and remove any empty entry that is defined.
+      </fix_text>
+
+- name: V-776 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+        Procedure: 
+        # echo $PATH |awk -F: '!/^\//'
+      </procedure>
+      <output>
+      V-776
+      The root account's executable search path must be the vendor default and must contain only absolute paths.
+      If there is an empty entry, such as a leading or trailing colon or two consecutive colons, this is a finding.
+      Procedure:
+      # echo $PATH |awk -F: '!/^\//'
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>All entries for PATH are absolute paths.</comments>
+      <status>Not a Finding</status>
+      <ccis>
+        <cci>CCI-000366</cci>
+      </ccis>
+      </finding> 
+  when: (checkmyconf1.stdout == "" and REPORT == 1)
+
+- name: V-776 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+        Procedure: 
+        # echo $PATH |awk -F: '!/^\//'
+      </procedure>
+      <output>
+      V-776
+      The root account's executable search path must be the vendor default and must contain only absolute paths.
+      If there is an empty entry, such as a leading or trailing colon or two consecutive colons, this is a finding.
+      Procedure:
+      # echo $PATH |awk -F: '!/^\//'
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>All entries for PATH are absolute paths.</comments>
+      <status>Ongoing</status>
+      <ccis>
+        <cci>CCI-000366</cci>
+      </ccis>
+      </finding> 
+  when: checkmyconf1.stdout != ""

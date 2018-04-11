@@ -1,0 +1,169 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22417 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22417"
+      rule_id="SV-26632r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must not send IPv4 ICMP redirects.</title>
+      <discussion>ICMP redirect messages are used by routers to inform hosts that a more direct route exists for a particular destination.  These messages contain information from the system's route table that could reveal portions of the network topology.</discussion>
+      <check_content>Determine the type of zone that you are currently securing.
+      # zonename
+
+      If the zone is not the global zone, determine if any interfaces are exclusive to the zone:
+      # dladm show-link
+
+      If the output indicates "insufficient privileges" then this requirement is not applicable.
+
+      If the zone is the global zone or the non-global zone has exclusive interfaces verify the system does not send IPv4 ICMP redirect messages.
+
+      Procedure:
+      # ndd /dev/ip ip_send_redirects
+
+      If the result is not 0, this is a finding.</check_content>
+      <fix_text>Configure the system to not send IPv4 ICMP redirect messages.
+
+      Procedure:
+      # ndd -set /dev/ip ip_send_redirects 0
+
+      Also add this command to a system startup script.</fix_text>
+      <ccis>
+      <cci>CCI-001551</cci>
+      </ccis>
+
+
+- name: V-22417 Check
+  shell: "if [ $(zonename) = 'global' ];   then if [ -z $(dladm show-link | awk '/insufficient/') ];       then ndd /dev/ip ip_respond_to_timestamp | awk '/0/ {print \"timestamp = 0\"}';            ndd /dev/ip ip_respond_to_echo_broadcast | awk '/0/ {print \"broadcast = 0\"}';            ndd /dev/tcp tcp_rev_src_routes | awk '/0/ {print \"routes = 0\"}';       else 'This system '`zonename`' does not meet the requirement';     fi;   else echo 'This is a zone and not applicable '`zonename`; fi"
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22417 Check 2
+  shell: "{ if [ $(zonename) = 'global' ];   then if [ -z $(dladm show-link | awk '/insufficient/') ];       then ndd /dev/ip ip_respond_to_timestamp | awk '/0/';            ndd /dev/ip ip_respond_to_echo_broadcast | awk '/0/';            ndd /dev/tcp tcp_rev_src_routes | awk '/0/';       else 'This system `zonename` does not meet the requirement';     fi;   else echo 'This is a zone and not applicable `zonename`'; fi; } | wc -l "
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22417 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22417 V-22411 V-22410 V-22412 V-22417 V-22417
+      The system must not process ICMP timestamp requests.
+      The system must not respond to ICMPv4 echoes sent to a broadcast address.
+      The system must not apply reversed source routing to TCP responses.
+      The system must ignore IPv4 ICMP redirect messages.
+      The system must not send IPv4 ICMP redirects.
+
+      If the output indicates "insufficient privileges" then this requirement is not applicable. 
+      If the zone is not the global zone, determine if any interfaces are exclusive to the zone: 
+      If the result is not 0, this is a finding.
+      IPv4 ICMP redirect messages - If the result is not 1, this is a finding.
+      send IPv4 ICMP redirects - If the result is not 0, this is a finding.
+      Procedure:
+      # if [ $(zonename) = "global" ]
+      #  then if [ -z $(dladm show-link | awk '/insufficient/') ]
+      #      then ndd /dev/ip ip_respond_to_timestamp | awk '/0/'
+      #           ndd /dev/ip ip_respond_to_echo_broadcast | awk '/0/'
+      #           ndd /dev/tcp tcp_rev_src_routes | awk '/0/'
+      #           ndd -get /dev/ip ip_ignore_redirect | awk '/1/'
+      #           ndd /dev/ip ip_send_redirects | awk '/0/'
+      #      else "This system `zonename` does not meet the requirement"
+      #    fi
+      #  else echo "This is a zone and not applicable `zonename`"
+      #fi
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>ndd /dev/ip ip_send_redirects returns 0</comments>
+      <status>Not a Finding</status>
+      </finding>
+
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-22417 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22417 V-22411 V-22410 V-22412 V-22417 V-22417
+      The system must not process ICMP timestamp requests.
+      The system must not respond to ICMPv4 echoes sent to a broadcast address.
+      The system must not apply reversed source routing to TCP responses.
+      The system must ignore IPv4 ICMP redirect messages.
+      The system must not send IPv4 ICMP redirects.
+
+      If the output indicates "insufficient privileges" then this requirement is not applicable. 
+      If the zone is not the global zone, determine if any interfaces are exclusive to the zone: 
+      If the result is not 0, this is a finding.
+      IPv4 ICMP redirect messages - If the result is not 1, this is a finding.
+      send IPv4 ICMP redirects - If the result is not 0, this is a finding.
+      Procedure:
+      # if [ $(zonename) = "global" ]
+      #  then if [ -z $(dladm show-link | awk '/insufficient/') ]
+      #      then ndd /dev/ip ip_respond_to_timestamp | awk '/0/'
+      #           ndd /dev/ip ip_respond_to_echo_broadcast | awk '/0/'
+      #           ndd /dev/tcp tcp_rev_src_routes | awk '/0/'
+      #           ndd -get /dev/ip ip_ignore_redirect | awk '/1/'
+      #           ndd /dev/ip ip_send_redirects | awk '/0/'
+      #      else "This system `zonename` does not meet the requirement"
+      #    fi
+      #  else echo "This is a zone and not applicable `zonename`"
+      #fi
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>ndd /dev/ip ip_send_redirects does NOT returns 0</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-22417 Fix-1
+  shell: ndd -set /dev/ip ip_respond_to_timestamp 0 ; ndd -set /dev/tcp tcp_rev_src_routes 0 ; ndd -set /dev/ip ip_respond_to_echo_broadcast 0; ndd -set /dev/ip ip_send_redirects 0; ndd -set /dev/ip ip_ignore_redirect 1
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)

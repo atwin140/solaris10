@@ -1,0 +1,124 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22374 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22374"
+      rule_id="SV-40562r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The audit system must alert the SA in the event of an audit processing failure.</title>
+      <discussion>An accurate and current audit trail is essential for maintaining 
+      a record of system activity. If the system fails, the SA must be notified and must take prompt 
+      action to correct the problem.
+
+      Minimally, the system must log this event and the SA will receive this notification during the 
+      daily system log review. If feasible, active alerting (such as email or paging) should be 
+      employed consistent with the site’s established operations management systems and procedures.
+      </discussion>
+      <check_content>Verify the presence of an audit_warn entry in /etc/mail/aliases.
+
+      # grep audit_warn /etc/mail/aliases
+
+      If there is no audit_warn entry in /etc/mail/aliases, this is a finding.</check_content>
+      <fix_text>Add an audit_warn alias to /etc/mail/aliases that will forward to designated system administrator(s).
+
+      # vi /etc/mail/aliases
+
+      Put the updated aliases file into service.
+
+      # newaliases</fix_text>
+- name: V-22374 Check
+  shell: grep audit_warn /etc/mail/aliases
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22374 Check 2
+  shell: grep audit_warn /etc/mail/aliases
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22374 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22374
+      The audit system must alert the SA in the event of an audit processing failure.
+      If there is no audit_warn entry in /etc/mail/aliases, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>audit_warn is defined in /etc/mail/aliases</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000139</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-22374 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22374
+      The audit system must alert the SA in the event of an audit processing failure.
+      If there is no audit_warn entry in /etc/mail/aliases, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>audit_warn is NOT defined in /etc/mail/aliases</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000139</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-22374 Fix-1
+  lineinfile: "dest=/etc/mail/aliases state=present regexp=^audit_warn line='audit_warn:     UnixAdmMail'"
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)

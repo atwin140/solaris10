@@ -1,0 +1,132 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11999 Check
+  shell: if [ $(zonename) = "global" ];  then grep noexec_user_stack /etc/system;  else echo 'This system '`zonename`' is a zone and this check does not apply.'; fi 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11999 Check 2
+  shell: if [ $(zonename) = "global" ];  then grep noexec_user_stack /etc/system;  else echo 'This system '`zonename`' is a zone and this check does not apply.'; fi 2>/dev/null 
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11999 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11999"
+      rule_id="SV-27412r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must implement non-executable program stacks.</title>
+      <discussion>A common type of exploit is the stack buffer overflow.  An application receives, from an attacker, more data than it is prepared for and stores this information on its stack, writing beyond the space reserved for it.  This can be designed to cause execution of the data written on the stack.  One mechanism to mitigate this vulnerability is for the system to not allow the execution of instructions in sections of memory identified as part of the stack.</discussion>
+      <check_content>This check applies to the global zone only. Determine the type of zone that you are currently securing.
+
+      # zonename
+
+      If the command output is "global", this check applies.
+
+      Determine if the system implements non-executable program stacks.
+      # grep noexec_user_stack /etc/system
+
+      If the noexec_user_stack is not set to 1, this is a finding.</check_content>
+      <fix_text>This action applies to the global zone only. Determine the type of zone that you are currently securing.
+
+      # zonename
+
+      If the command output is "global", this action applies.
+
+      Edit /etc/system and set the noexec_user_stack parameter to 1.  Restart the system for the setting to take effect.</fix_text>
+      <procedure>{ Procedure goes here }</procedure>
+
+
+- name: V-11999 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11999
+      The system must implement non-executable program stacks.
+      If the noexec_user_stack is not set to 1, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/var/crash is owned by root</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+        
+- name: V-11999 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11999
+      The kernel core dump data directory must be owned by root.
+      If the kernel core dump data directory is not owned by root, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/var/crash is owned by root</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-11999 Fix-1
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)
+  lineinfile: dest=/etc/system state=present regexp="noexec_user_stack" line="noexec_user_stack=1"

@@ -1,0 +1,120 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+- name: V-22370 Fix-1
+  file: path="{{item}}"  owner=root group=root mode=0750
+  ignore_errors: True
+  with_items:  
+    - /usr/sbin/auditd 
+    - /usr/sbin/audit 
+    - /usr/sbin/bsmrecord 
+    - /usr/sbin/auditreduce 
+    - /usr/sbin/praudit 
+    - /usr/sbin/auditconfig
+
+- name: V-22370 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22370"
+      rule_id="SV-26505r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>System audit tool executables must be owned by root.</title>
+      <discussion>To prevent unauthorized access or manipulation of system audit logs, the tools for manipulating those logs must be protected.</discussion>
+      <check_content>Verify the audit tool executables are owned by root.
+      # ls -l /usr/sbin/auditd /usr/sbin/audit /usr/sbin/bsmrecord /usr/sbin/auditreduce /usr/sbin/praudit /usr/sbin/auditconfig
+      If any listed file is not owned by root, this is a finding.
+      </check_content>
+      <fix_text>Change the owner of the audit tool executable to root.
+      # chown root [audit tool executable]</fix_text>
+
+
+- name: V-22370 Check
+  shell: ls -l /usr/sbin/auditd /usr/sbin/audit /usr/sbin/bsmrecord /usr/sbin/auditreduce /usr/sbin/praudit /usr/sbin/auditconfig
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+# - name: V-22370 Check 2
+#   stat: path="{{item}}"
+#   with_items:  
+#     - /usr/sbin/auditd 
+#     - /usr/sbin/audit 
+#     - /usr/sbin/bsmrecord 
+#     - /usr/sbin/auditreduce 
+#     - /usr/sbin/praudit 
+#     - /usr/sbin/auditconfig
+#   register: checkmyconf2
+#   ignore_errors: True
+#   changed_when: False
+
+# - debug:
+#   msg:  "{{ checkmyconf2 }}"
+#   verbosity: 3
+
+
+- name: V-22370 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22370
+      System audit tool executables must be owned by root.
+      If any listed file is not owned by root, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Files do not have extended ACLs configured</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001493</cci>
+      </ccis>
+      </finding>
+  # when: (checkmyconf2.stdout == "" and REPORT == 1)
+#   
+
+
+
+# - name: V- Fix-1
+#   ignore_errors: True
+#   when: (checkmyconf2.stdout == "" and FIX == 1)
+#   lineinfile: dest=FFF state=present regexp="FFF" line="FFF"
+#  shell:  FFF
+#  args:
+#    executable: /bin/bash
+#  file: path="{{item}}" group=FFF owner=FFF mode=FFF state=present
+#  with_items: "{{checkmyconf2.stdout_lines}}"
+
+#- service: name=FFF state=restarted
+#  when: (checkmyconf2.stdout == "" and FIX == 1)
+
+#  stat: path="FFF"
+#  when: (checkmyconf2.stat.mode >="0751" and FIX == 1)
+

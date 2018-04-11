@@ -1,0 +1,109 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+- name: V-797 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-797"
+      rule_id="SV-39826r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The /etc/shadow (or equivalent) file must be owned by root.</title>
+      <discussion>The /etc/shadow file contains the list of local system accounts.  It is vital to system security and must be protected from unauthorized modification.  Failure to give ownership of sensitive files or utilities to root provides the designated owner and unauthorized users with the potential to access sensitive information or change the system configuration which could weaken the system's security posture.</discussion>
+      <check_content>Check the ownership of the /etc/shadow file.
+      # ls -lL /etc/shadow
+      If the /etc/shadow file is not owned by root, this is a finding.
+      </check_content>
+      <fix_text>Change the ownership of the /etc/shadow file.
+      # chown root /etc/shadow</fix_text>
+
+- name: V-797 Check
+  shell: ls -lL /etc/shadow
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-797 Check 2
+  shell: ls -ld /etc/shadow | awk '$3 ~ /root/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-797 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+      Procedure: 
+      # ls -lL /etc/shadow
+      </procedure>
+      <output>
+      V-797
+      The /etc/shadow (or equivalent) file must be owned by root.
+      If the /etc/shadow file is not owned by root, this is a finding.
+      Procedure:
+      # ls -lL /etc/shadow
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>the shadow file is owned by root</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+
+- name: V-797 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+      Procedure: 
+      # ls -lL /etc/shadow
+      </procedure>
+      <output>
+      V-797
+      The /etc/shadow (or equivalent) file must be owned by root.
+      If the /etc/shadow file is not owned by root, this is a finding.
+      Procedure:
+      # ls -lL /etc/shadow
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>The shadow file is Not owned by root</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-797 Fix-1
+  file: path=/etc/shadow group=root owner=root mode=0400 state=present
+  when: (checkmyconf2.stdout == "" and FIX == 1)

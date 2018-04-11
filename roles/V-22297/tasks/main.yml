@@ -1,0 +1,115 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22297 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22297"
+      rule_id="SV-26301r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The time synchronization configuration file (such as /etc/ntp.conf) must not have an extended ACL.</title>
+      <discussion>A synchronized system clock is critical for the enforcement of time-based policies and the correlation of logs and audit records with other systems.  If an illicit time source is used for synchronization, the integrity of system logs and the security of the system could be compromised.  If the configuration files controlling time synchronization are not protected, unauthorized modifications could result in the failure of time synchronization.</discussion>
+      <check_content>Check for an extended ACL on the NTP configuration file.
+      # ls -l /etc/inet/ntp.conf
+      If the permissions contain a "+", the file has an extended ACL and this is a finding.</check_content>
+      <fix_text>Remove the extended ACL from the file.
+      # chmod A- /etc/inet/ntp.conf</fix_text>
+
+- name: V-22297 Check
+  shell: ls -l /etc/inet/ntp.conf 2>&1
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22297 Check 2
+  shell: ls -l /etc/inet/ntp.conf | awk '$1 !~ /\+/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22297 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22297
+      The time synchronization configuration file (such as /etc/ntp.conf) must not have an extended ACL.
+      If the permissions contain a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/etc/inet/ntp.conf does not have extended ACLs configured</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-22297 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22297
+      The time synchronization configuration file (such as /etc/ntp.conf) must not have an extended ACL.
+      If the permissions contain a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/etc/inet/ntp.conf does not have extended ACLs configured</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-22297 Fix-1
+  shell:  chmod A- /etc/inet/ntp.conf
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)

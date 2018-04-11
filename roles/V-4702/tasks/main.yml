@@ -1,0 +1,117 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-4702 Check
+  shell: echo | ftp localhost; /audit/Admin_Scripts/./Unlock_Admins.sh
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+  async: 3600
+  poll: 10
+
+- name: V-4702 Check 2
+  shell: echo | ftp localhost 2>/dev/null | awk '!/Lost connection|Connection refused|Login incorrect/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+  async: 3600
+  poll: 10
+
+- name: V-4702 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-4702"
+      rule_id="SV-4702r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>If the system is an anonymous FTP server, it must be isolated to the DMZ network.</title>
+      <discussion>Anonymous FTP is a public data service which is only permitted in a server capacity when located on the DMZ network.</discussion>
+      <check_content>Use the command ftp to connect the system's FTP service. Attempt to log into this host with a user name of anonymous and a password of guest (also try the password of guest@mail.com). If the logon is not successful, this check is not applicable.
+
+      Ask the SA if the system is located on a DMZ network. If the system is not located on a DMZ network, this is a finding.</check_content>
+      <fix_text>Move the system to a DMZ network.</fix_text>
+
+
+- name: V-4702 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+      Procedure: 
+      # {{ checkmyconf1.cmd }}
+      </procedure>
+      <output>
+      V-4702
+      If the system is an anonymous FTP server, it must be isolated to the DMZ network.
+      If the logon is not successful, this check is not applicable.
+
+      This is not an anonymous FTP server.
+
+      Procedure:
+      # {{ checkmyconf1.cmd }}
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      -
+      ====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>This is not an anonymous ftp server</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-4702 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+      Procedure: 
+      # {{ checkmyconf1.cmd }}
+      </procedure>
+      <output>
+      V-4702
+      If the system is an anonymous FTP server, it must be isolated to the DMZ network.
+      If the logon is not successful, this check is not applicable.
+
+      This is not an anonymous FTP server.
+
+      Procedure:
+      # {{ checkmyconf1.cmd }}
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>This is an anonymous ftp server</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""

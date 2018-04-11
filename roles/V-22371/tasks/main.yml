@@ -1,0 +1,88 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+- name: V-22370 Fix-1
+  file: path="{{item}}"  owner=root group=root mode=0750
+  ignore_errors: True
+  with_items:  
+    - /usr/sbin/auditd 
+    - /usr/sbin/audit 
+    - /usr/sbin/bsmrecord 
+    - /usr/sbin/auditreduce 
+    - /usr/sbin/praudit 
+    - /usr/sbin/auditconfig
+
+
+- name: V-22371 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22371"
+      rule_id="SV-26508r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>System audit tool executables must be group-owned by root, bin, or sys.</title>
+      <discussion>To prevent unauthorized access or manipulation of system audit logs, the tools for manipulating those logs must be protected.</discussion>
+      <check_content>Verify the audit tool executables are group-owned by root, bin, or sys.
+
+      Procedure:
+      # ls -lL /usr/sbin/auditd /usr/sbin/audit /usr/sbin/bsmrecord /usr/sbin/auditreduce /usr/sbin/praudit /usr/sbin/auditconfig
+
+      If any listed file is not group-owned by root, bin, or sys, this is a finding.</check_content>
+      <fix_text>Change the group-owner of the audit tool executable to root, bin, or sys.
+
+      Procedure:
+      # chgrp root &lt;audit tool executable&gt;</fix_text>
+
+
+- name: V-22371 Check
+  shell: ls -l /usr/sbin/auditd /usr/sbin/audit /usr/sbin/bsmrecord /usr/sbin/auditreduce /usr/sbin/praudit /usr/sbin/auditconfig
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22371 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22371
+      System audit tool executables must be group-owned by root, bin, or sys.
+      If any listed file is not group-owned by root, bin, or sys, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Files are group-owned by root</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001493</cci>
+      </ccis>
+      </finding>
+  
+

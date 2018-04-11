@@ -1,0 +1,118 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+- name: V-22427 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding 
+      v_id="V-22427"
+      rule_id="SV-39903r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The services file must be group-owned by root, bin, or sys.</title>
+      <discussion>Failure to give ownership of system configuration files to root or a system group provides the designated owner and unauthorized users with the potential to change the system configuration which could weaken the system's security posture.</discussion>
+      <check_content>Check the group ownership of the services file.
+
+      Procedure:
+      # ls -lL /etc/services
+
+      If the file is not group-owned by root, bin, or sys, this is a finding.</check_content>
+      <fix_text>Change the group-owner of the services file.
+
+      Procedure:
+      # chgrp root /etc/services</fix_text>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+
+- name: V-22427 Check
+  shell: ls -lL /etc/services 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22427 Check 2
+  stat: path=/etc/services
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+
+- name: V-22427 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22427
+      The services file must be group-owned by root, bin, or sys.
+      If the file is not group-owned by root, bin, or sys, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/etc/services is group owned by root</comments>
+      <status>Not a Finding</status>
+      </finding>
+      
+  when: checkmyconf2.stat.gid == 0
+
+  # Other options:"Ongoing", "Not Reviewed", or "Not Applicable"
+        
+- name: V-22427 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22427
+      The services file must be group-owned by root, bin, or sys.
+      If the file is not group-owned by root, bin, or sys, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>/etc/services is NOT group owned by root</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stat.gid != 0
+
+- name: V-22427 Fix-1
+  ignore_errors: True
+  when: (checkmyconf2.stat.gid != 0 and FIX == 1)
+  file: path=/etc/services group=root owner=root state=file

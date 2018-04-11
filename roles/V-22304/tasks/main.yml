@@ -1,0 +1,133 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22304 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22304"
+      rule_id="SV-40790r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The password hashes stored on the system must have been generated using a FIPS 140-2 approved cryptographic hashing algorithm.</title>
+      <discussion>Systems must employ cryptographic hashes for passwords using the SHA-2 family of algorithms or FIPS 140-2 approved successors. The use of unapproved algorithms may result in weak password hashes more vulnerable to compromise.</discussion>
+      <check_content>Determine if any password hashes stored on the system were not generated using a FIPS 140-2 approved cryptographic hashing algorithm.
+
+      Procedure:
+      # cut -d ':' -f2 /etc/passwd
+      # cut -d ':' -f2 /etc/shadow
+
+      If any password hashes are present not beginning with $5$ or $6$,  this is a finding.
+
+      Verify that FIPS 140-2 approved cryptographic hashing algorithms are available.
+      # egrep '^[56]' /etc/security/crypt.conf
+      If no lines are returned, this is a finding.</check_content>
+      <fix_text>If the /etc/security/crypt.conf file does not support FIPS 140-2 approved cryptographic hashing algorithms, upgrade to at least the Solaris 10 8/07 release.
+
+      Edit the /etc/security/policy.conf file.
+      # vi /etc/security/policy.conf
+      Uncomment or add the CRYPT_ALGORITHMS_ALLOW line and set it to "5,6". Update the CRYPT_DEFAULT default line to be equal to 5 or 6. The following lines are acceptable.
+
+      CRYPT_ALGORITHMS_ALLOW=5,6
+      CRYPT_DEFAULT=6
+
+      Update passwords for all accounts with non-compliant password hashes.</fix_text>
+
+- name: V-22304 Check
+  shell: cut -d ':' -f2 /etc/passwd; awk "-F:" '{print $1 " - "$2}' /etc/shadow; egrep '^[56]' /etc/security/crypt.conf
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22304 Check 2
+  shell: awk "-F:" '$2 !~ /NP|\*LK\*|\$5|\$6|UP/ {print $1}' /etc/shadow
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22304 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22304
+      The password hashes stored on the system must have been generated using a FIPS 140-2 approved cryptographic hashing algorithm.
+      If any password hashes are present not beginning with $5$ or $6$, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>All password hashes for unlocked accounts begin with $5 or $6 and the the proper settings are in /etc/security/crypt.conf</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000196</cci>
+      </ccis>
+      </finding>  
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22304 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22304
+      The password hashes stored on the system must have been generated using a FIPS 140-2 approved cryptographic hashing algorithm.
+      If any password hashes are present not beginning with $5$ or $6$, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>NOT All password hashes for unlocked accounts begin with $5 or $6 and the the proper settings are in /etc/security/crypt.conf</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000196</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+
+- name: V-22304 Fix-2 - Change users password
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)
+  user: name="{{item}}" update_password=always password=$6$tzxg/k0gWq457/0u$2XyO.9UUs5T.XsgD2.1L6BILXA2hrNbdquDSVkKaSOASXiuOvguVi4nRCcpEnJY5qRmVRc3nGhgZNWRpddm1L0
+  with_items: "{{checkmyconf2.stdout_lines}}"

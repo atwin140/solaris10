@@ -1,0 +1,117 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-798 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-798"
+      rule_id="SV-798r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The /etc/passwd file must have mode 0644 or less permissive.</title>
+      <discussion>If the password file is writable by a group owner or the world, the risk of password file compromise is increased.  The password file contains the list of accounts on the system and associated information.</discussion>
+      <check_content>Check the mode of the /etc/passwd file.
+
+      Procedure:
+      # ls -lL /etc/passwd
+
+      If /etc/passwd has a mode more permissive than 0644, this is a finding.</check_content>
+      <fix_text>Change the mode of the passwd file to 0644.
+
+      Procedure:
+      # chmod 0644 /etc/passwd
+
+      Document all changes.</fix_text>
+
+
+- name: V-798 Check
+  shell: ls -lL /etc/passwd
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-798 Check 2
+  stat: path=/etc/passwd
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-798 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output>
+      V-798
+      The /etc/passwd file must have mode 0644 or less permissive.
+      If /etc/passwd has a mode more permissive than 0644, this is a finding.
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      File Mode = {{checkmyconf2.stat.mode}}
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>the system file is not more permissive than 0644</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stat.mode == '0644' and REPORT == 1)
+
+- name: V-798 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output>
+      V-798
+      The /etc/passwd file must have mode 0644 or less permissive.
+      If /etc/passwd has a mode more permissive than 0644, this is a finding.
+      
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      File Mode = {{checkmyconf2.stat.mode}}
+      ====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>the system file is more permissive than 0644</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stat.mode != '0644'
+
+- name: V-798 Fix-1
+  file: path=/etc/passwd mode=0644
+  when: (checkmyconf2.stat.mode != '0644' and FIX == 1)

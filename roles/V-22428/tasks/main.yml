@@ -1,0 +1,109 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22428 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22428"
+      rule_id="SV-26660r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The services file must not have an extended ACL.</title>
+      <discussion>The services file is critical to the proper operation of network services and must be protected from unauthorized modification.  If the services file has an extended ACL, it may be possible for unauthorized users to modify the file.  Unauthorized modification could result in the failure of network services.</discussion>
+      <check_content>Check the permissions of the /etc/services file.
+      # ls -lL /etc/services
+      If the permissions include a "+", the file has an extended ACL, this is a finding.</check_content>
+      <fix_text>Remove the extended ACL from the file.
+      # chmod A- /etc/services</fix_text>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+
+
+- name: V-22428 Check
+  shell: ls -lL /etc/services 2>&1
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22428 Check 2
+  shell: ls -lL /etc/services | awk '$1 ~ /\+/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22428 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22428
+      The services file must not have an extended ACL.
+      If the permissions include a "+", the file has an extended ACL, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>no extended ACLs are configured on /etc/services </comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22428 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22428
+      The services file must not have an extended ACL.
+      If the permissions include a "+", the file has an extended ACL, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>Extended ACLs are configured on /etc/services </comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22428 Fix-1
+  shell:  chmod A- /etc/services
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

@@ -1,0 +1,151 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22418 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22418"
+      rule_id="SV-29773r2_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must log martian packets.</title>
+      <discussion>Martian packets are packets containing addresses known by the system to be invalid.  Logging these messages allows the SA to identify misconfigurations or attacks in progress.</discussion>
+      <check_content>If the system is not a global zone, this vulnerability is not applicable.
+
+      Determine if the system is configured to log martian packets.  Examine the IPF rules on the system.
+
+      Procedure:
+      # ipfstat -i
+
+      There must be rules logging inbound traffic containing invalid source addresses, which minimally include the system's own addresses and broadcast addresses for attached subnets.  If such rules do not exist, this is a finding.</check_content>
+      <fix_text>Configure the system to log martian packets using IPF.  Add rules logging inbound traffic containing invalid source addresses, which minimally include the system's own addresses and broadcast addresses for attached subnets.
+
+      For example, consider a system with a single network connection having IP address 192.168.1.10 with a local subnet broadcast address of 192.168.1.255.  Packets with source addresses of 192.168.1.10 and 192.168.1.255 must be logged if received by the system from the network connection.
+
+      Edit /etc/ipf/ipf.conf and add the following rules, substituting local addresses and interface names:
+      block in log quick on ce0 from 192.168.1.10 to any
+      block in log quick on ce0 from 192.168.1.255 to any
+
+      Reload the IPF rules.
+      Procedure:
+      # ipf -Fa -A -f /etc/ipf/ipf.conf</fix_text>
+      <ccis>
+      <cci>CCI-000126</cci>
+      </ccis>
+
+
+- name: V-22418 Check
+  shell: "if [ $(zonename) = 'global' ]; then if [ -z $(dladm show-link | awk '/insufficient/') ]; then ipfstat -i; else 'This system '`zonename`' does not meet the requirement';     fi;   else echo 'This is a zone and not applicable '`zonename`; fi"
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22418 Check 2
+  shell: "if [ $(zonename) = 'global' ]; then if [ -z $(dladm show-link | awk '/insufficient/') ]; then ipfstat -i | awk '/192.168./'; else 'This system '`zonename`' does not meet the requirement'; fi; else echo 'This is a zone and not applicable '`zonename`; fi"
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22418 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22418
+      The system must log martian packets.
+      If the system is not a global zone, this vulnerability is not applicable.
+      There must be rules logging inbound traffic containing invalid source addresses, which minimally include the system's own addresses and broadcast addresses for attached subnets. If such rules do not exist, this is a finding.
+      Procedure:
+      # if [ $(zonename) = 'global' ]
+      #   then if [ -z $(dladm show-link | awk '/insufficient/') ]
+      #       then ipfstat -i
+      #       else 'This system '`zonename`' does not meet the requirement'
+      #     fi
+      #   else echo 'This is a zone and not applicable '`zonename`
+      # fi
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>the system is configured to log martian packets</comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-22418 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22418
+      The system must log martian packets.
+      If the system is not a global zone, this vulnerability is not applicable.
+      There must be rules logging inbound traffic containing invalid source addresses, which minimally include the system's own addresses and broadcast addresses for attached subnets. If such rules do not exist, this is a finding.
+      Procedure:
+      # if [ $(zonename) = 'global' ]
+      #   then if [ -z $(dladm show-link | awk '/insufficient/') ]
+      #       then ipfstat -i
+      #       else 'This system '`zonename`' does not meet the requirement'
+      #     fi
+      #   else echo 'This is a zone and not applicable '`zonename`
+      # fi
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>the system is NOT configured to log martian packets</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-22418 Fix-1
+  shell:  |
+    /sbin/ifconfig -a                                          | \
+    /bin/awk -F: '/^[a-z].*/ { printf $1; getline; print $1 }' | \
+    /bin/grep -v lo0                                           | \
+    /bin/awk '{print "block in log quick on "$1 " from "$3 " to any"}' >> /etc/ipf/ipf.conf;  ipf -Fa -A -f /etc/ipf/ipf.conf
+  args:
+    executable: /bin/bash
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)

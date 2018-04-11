@@ -1,0 +1,115 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12001 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12001"
+      rule_id="SV-27416r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must use initial TCP sequence numbers most resistant to sequence number guessing attacks.</title>
+      <discussion>One use of initial TCP sequence numbers is to verify bidirectional communication between two hosts, which provides some protection against spoofed source addresses being used by the connection originator.  If the initial TCP sequence numbers for a host can be determined by an attacker, it may be possible to establish a TCP connection from a spoofed source address without bidirectional communication.</discussion>
+      <check_content># grep "TCP_STRONG_ISS=2" /etc/default/inetinit
+      If this variable is not set, this is a finding.</check_content>
+      <fix_text>Edit /etc/default/inetinit and set the TCP_STRONG_ISS parameter to 2.</fix_text>
+
+- name: V-12001 Check
+  shell: grep "TCP_STRONG_ISS=2" /etc/default/inetinit 2>&1
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12001 Check 2
+  shell:  grep "TCP_STRONG_ISS=2" /etc/default/inetinit 2>/dev/null
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12001 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12001
+      The system must use initial TCP sequence numbers most resistant to sequence number guessing attacks.
+      If this variable is not set, TCP_STRONG_ISS=2, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>TCP_STRONG_ISS=2 is set</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001436</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-12001 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12001
+      The system must use initial TCP sequence numbers most resistant to sequence number guessing attacks.
+      If this variable is not set, TCP_STRONG_ISS=2, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>TCP_STRONG_ISS=2 is NOT set</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-001436</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+
+- name: V-11999 Fix-1
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)
+  lineinfile: dest=/etc/default/inetinit state=present regexp="TCP_STRONG_ISS" line="TCP_STRONG_ISS=2"
+

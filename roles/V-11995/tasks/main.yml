@@ -1,0 +1,122 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11995 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11995"
+      rule_id="SV-27335r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>Default system accounts (with the exception of root) must not be listed in the cron.allow file or must be included in the cron.deny file, if cron.allow does not exist.</title>
+      <discussion>To centralize the management of privileged account crontabs, of the default system accounts, only root may have a crontab.</discussion>
+      <check_content>Check the cron.allow and cron.deny files for the system.
+      # more /etc/cron.d/cron.allow
+      # more /etc/cron.d/cron.deny
+      If a default system account (such as bin, sys, adm, or others) is listed in the cron.allow file, or not listed in the cron.deny file if no cron.allow file exists, this is a finding.</check_content>
+      <fix_text>Remove default system accounts (such as bin, sys, adm, or others) from the cron.allow file if it exists, or add those accounts to the cron.deny file.</fix_text>
+
+- name: V-11995 Check
+  shell: COUNT=`logins -st | awk '!/root/' | wc -l`; LIST=`logins -st | awk '!/root/ {print $1}' | paste -s -d'|' - | while read SYSACCTS; do awk '/'$SYSACCTS'/' /etc/cron.d/cron.deny | wc -l; done`; if [ "$COUNT" = "$LIST" ]; then echo MATCH; fi
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11995 Check 2
+  shell: logins -st | awk '!/root/ {print $1}'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11995 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11995
+      Default system accounts (with the exception of root) must not be listed in the cron.allow file or must be included in the cron.deny file, if cron.allow does not exist.
+      If a default system account (such as bin, sys, adm, or others) is listed in the cron.allow file, or not listed in the cron.deny file if no cron.allow file exists, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>System accounts are NOT listed in cron.allow</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf1.stdout != "" and REPORT == 1)
+
+- name: V-11995 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11995
+      Default system accounts (with the exception of root) must not be listed in the cron.allow file or must be included in the cron.deny file, if cron.allow does not exist.
+      If a default system account (such as bin, sys, adm, or others) is listed in the cron.allow file, or not listed in the cron.deny file if no cron.allow file exists, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>System accounts are listed in cron.allow</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf1.stdout == ""
+
+- name: V-11995 Fix-1
+  lineinfile: dest=/etc/cron.d/cron.deny state=present regexp="{{item}}" line="{{item}}"
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf1.stdout == "" and FIX == 1)
+
+- name: V-11995 Fix-2
+  lineinfile: dest=/etc/cron.d/cron.allow state=present regexp="{{item}}" line="#{{item}}"
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf1.stdout == "" and FIX == 1)

@@ -1,0 +1,116 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12018 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12018"
+      rule_id="SV-12519r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>X Window System connections that are not required must be disabled.</title>
+      <discussion>If unauthorized clients are permitted access to the X server, a user's X session may be compromised.</discussion>
+      <check_content>Determine if the X Window system is running.
+
+      Procedure:
+      # ps -ef |grep X
+
+      Ask the SA if the X Window system is an operational requirement. If it is not, this is a finding.</check_content>
+      <fix_text>Disable the X Windows server on the system.</fix_text>
+
+- name: V-12018 Check
+  shell: ps -ef |grep X 
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12018 Check 2
+  shell: ps -ef | awk '$9 ~ /X/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12018 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12018 V-12017 V-12018
+      .Xauthority or X*.hosts (or equivalent) file(s) must be used to restrict access to the X server.
+      Determine if the X server is running.
+
+      X Windows and desktop sessions are not used on this system.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>X server is not running </comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001436</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-12018 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12018 V-12017 V-12018
+      .Xauthority or X*.hosts (or equivalent) file(s) must be used to restrict access to the X server.
+      Determine if the X server is running.
+
+      X Windows and desktop sessions are not used on this system.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>X server is running </comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-001436</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""

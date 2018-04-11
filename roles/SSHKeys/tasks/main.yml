@@ -1,0 +1,22 @@
+- name: SSHKeys Fix-1
+  ignore_errors: True
+  lineinfile: dest=/etc/ssh/sshd_config state=present regexp="PubkeyAuthentication" line="PubkeyAuthentication no"
+
+- name: SSHKeys Fix2
+  ignore_errors: True
+  blockinfile:
+    dest: /etc/ssh/sshd_config
+    state: present
+    marker: " "
+    block: |
+      Match group staff,sysadmin,dba,users,coggroup
+      PubkeyAuthentication no
+      Match user scanuser
+      PubkeyAuthentication yes
+
+- name: RSAKeys Fix-1
+  ignore_errors: True
+  #lineinfile: dest=/etc/sd_pam.conf state=present regexp="LIST_OF_USERS" line="LIST_OF_USERS=scanuser:root:nz:sparesprod:nbisbackup:dsadm:maestro:oracle:chicoind:maint:twsman:maestro:nagios:bobjprod:sas:sassrv:sasdemo:lsfadmin:lasradm:lsfuser:infaprod:testusr:fmotuprod:mqm:bobjtdp:isenbep"
+  lineinfile: dest=/etc/sd_pam.conf state=present regexp="LIST_OF_USERS" line="LIST_OF_USERS=scanuser:darleya:pricketm:m:root:nz:sparesprod:nbisbackup:dsadm:maestro:oracle:chicoind:maint:twsman:maestro:nagios:bobjprod:sas:sassrv:sasdemo:lsfadmin:lasradm:lsfuser:infaprod:testusr:fmotuprod:mqm:bobjtdp:isenbep"
+  
+- service: name=ssh state=restarted

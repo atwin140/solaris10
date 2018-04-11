@@ -1,0 +1,114 @@
+###############################################
+  # Developed For 7.2.4 by Andrew Darley     
+  #     andrew.darley.ctr@navy.mil  
+  #      
+  # Originally created for:
+  # Solaris 10 x86/SPARC Manual STIG - Ver 1
+  # Release: 19 Benchmark Date: 28 Jul 2017
+  # 
+  # This is expected to run with a play book that
+  # defines these variables
+  # output_path
+  # out_file
+  # FIX
+  ###############################################
+  
+  
+- name: V-22405 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22405"
+      rule_id="SV-26610r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The kernel core dump data directory must be group-owned by root.</title>
+      <discussion>Kernel core dumps may contain the full contents of system memory at the time of the crash.  As the system memory may contain sensitive information, it must be protected accordingly.  If the kernel core dump data directory is not group-owned by a system group, the core dumps contained in the directory may be subject to unauthorized access.</discussion>
+      <check_content>Determine the kernel core dump data directory. 
+
+      # dumpadm | grep "Savecore directory"
+      OR
+      # grep DUMPADM_SAVDIR /etc/dumpadm.conf
+
+      Check ownership of the core dump data directory.
+      # ls -l [savecore directory]
+      If the directory is not group-owned by root, this is a finding.</check_content>
+      <fix_text>Change the group-owner of the kernel core dump data directory.
+      # chgrp root [kernel core dump data directory]</fix_text>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+
+
+- name: V-22405 Check
+  shell: grep DUMPADM_SAVDIR /etc/dumpadm.conf | awk "-F=" '{print $2}' | xargs ls -ld
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22405 Check 2
+  shell: grep DUMPADM_SAVDIR /etc/dumpadm.conf | awk "-F=" '{print $2}' | xargs ls -ld | awk '$4 !~ /root/ {print $9}'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22405 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22405
+      The kernel core dump data directory must be group-owned by root.
+      If the directory is not group-owned by root, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>the dump directory is group owned by root</comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22405 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22405
+      The kernel core dump data directory must be group-owned by root.
+      If the directory is not group-owned by root, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>the dump directory is NOT group owned by root</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22405 Fix
+  file: dest={{ checkmyconf2.stdout }} state=directory group=root
+  when: (checkmyconf2.stdout != "" and FIX == 1)

@@ -1,0 +1,109 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22384 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22384"
+      rule_id="SV-26528r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The cron.allow file must not have an extended ACL.</title>
+      <discussion>A cron.allow file that is readable and/or writable by other than root could allow potential intruders and malicious users to use the file contents to help discern information, such as who is allowed to execute cron programs, which could be harmful to overall system and network security.</discussion>
+      <check_content>Check the permissions of the cron.allow file.
+      # ls -l /etc/cron.allow
+      If the permissions include a "+", the file has an extended ACL and this is a finding.</check_content>
+      <fix_text>Remove the extended ACL from the file.
+      # chmod A- /etc/cron.allow</fix_text>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+
+- name: V-22384 Check
+  shell: ls -lL /etc/cron.allow /var/spool/cron/crontabs/ var/cron/log /etc/cron.d/cron.deny /etc/cron.d/at.allow /etc/cron.d/at.deny /etc/cron.d/cron.deny 2>&1 ; ls -lLd /var/spool/cron/atjobs /var/spool/cron/crontabs/ 2>&1
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22384 Check 2
+  shell: ls -lL /etc/cron.allow /var/spool/cron/crontabs/ var/cron/log /etc/cron.d/cron.deny /etc/cron.d/at.allow /etc/cron.d/at.deny /etc/cron.d/cron.deny 2>/dev/null | awk '$1 ~ /\+/ {print $9}'; ls -lLd /var/spool/cron/atjobs /var/spool/cron/crontabs/ 2>/dev/null | awk '$1 ~ /\+/ {print $9}'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22384 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22384 V-22388 V-22387 V-22386 V-22389 V-22390 V-22393 V-22395
+      The cron.allow file must not have an extended ACL.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>No ACLs found</comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22384 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+        <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+        </procedure>
+        <output> 
+        V-22384 V-22388 V-22387 V-22386 V-22389 V-22390 V-22393 V-22395
+        The cron.allow file must not have an extended ACL.
+        If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+        <![CDATA[
+        OUTPUT:
+        ->  {{ checkmyconf1.stdout }}
+        ]]>====================================================================
+        This is a FINDING
+        -
+        </output>
+        <comments>ACLs are found</comments>
+        <status>Ongoing</status>
+        </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22384 Fix-1
+  shell:  chmod A- "{{item}}"
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

@@ -1,0 +1,123 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22403 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22403"
+      rule_id="SV-26602r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The centralized process core dump data directory must not have an extended ACL.</title>
+      <discussion>Process core dumps contain the memory in use by the process when it crashed.  Any data the process was handling may be contained in the core file, and it must be protected accordingly.  If the process core dump data directory has an extended ACL, unauthorized users may be able to view or to modify sensitive information contained any process core dumps in the directory.</discussion>
+      <check_content>Check the defined directory for process core dumps.
+
+      # coreadm | grep "global core file pattern"
+      OR
+      # grep COREADM_GLOB_PATTERN /etc/coreadm.conf
+
+      Check the permissions of the directory.
+      # ls -lLd [core file directory]
+      If the permissions include a "+", the file has an extended ACL and this is a finding.</check_content>
+      <fix_text>Remove the extended ACL from the directory.
+      # chmod A- [core file directory]</fix_text>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+
+- name: V-22403 Check
+  shell: grep COREADM_GLOB_PATTERN /etc/coreadm.conf; ls -ld /var/core/
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22403 Check 2
+  shell: ls -ld /var/core/ | awk '$3 !~ /root/ || $4 !~ /root/ || $1 ~ /\+/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22403 Check 3
+  stat: path=/var/core
+  register: checkmyconf3
+  ignore_errors: True
+  changed_when: False
+
+
+- name: V-22403 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22403
+      The centralized process core dump data directory must not have an extended ACL.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }} 
+      Mode = {{checkmyconf3.stat.mode}}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>extended ACLs are not configured on /var/core</comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout == "" and checkmyconf3.stat.mode =="0700" and REPORT == 1)
+
+- name: V-22403 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22403
+      The centralized process core dump data directory must not have an extended ACL.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }} 
+      Mode = {{checkmyconf3.stat.mode}}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>extended ACLs are not configured on /var/core</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: (checkmyconf2.stdout != "" or checkmyconf3.stat.mode !="0700" )
+
+- name: V-22403 Fix-1
+  file: path=/var/core group=root owner=root mode=0700 state=directory
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" or checkmyconf3.stat.mode !="0700" and FIX == 1)

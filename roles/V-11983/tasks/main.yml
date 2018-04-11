@@ -1,0 +1,125 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11983 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11983"
+      rule_id="SV-39831r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All global initialization files must be group-owned by root, sys, or bin.</title>
+      <discussion>Global initialization files are used to configure the user's shell environment upon login.  Malicious modification of these files could compromise accounts upon logon.  Failure to give ownership of sensitive files or utilities to root or bin provides the designated owner and unauthorized users with the potential to access sensitive information or change the system configuration which could weaken the system's security posture.</discussion>
+      <check_content>Check the group ownership of global initialization files.
+
+      Procedure:
+      # ls -lL /etc/.login /etc/profile /etc/bashrc /etc/environment /etc/security/environ /etc/csh.login /etc/csh.cshrc
+
+      If any global initialization file exists and is not group-owned by root, sys, or bin, this is a finding.</check_content>
+      <fix_text>Change the group ownership of the global initialization file(s) with incorrect group ownership.
+
+      Procedure:
+      # chgrp root &lt;global initialization file&gt;</fix_text>
+
+
+- name: V-11983 Check
+  shell: ls -ld /etc/.login /etc/profile /etc/bashrc /etc/environment /etc/security/environ /etc/csh.login /etc/csh.cshrc 2>&1
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11983 Check 2
+  shell: find /etc/.login /etc/profile /etc/bashrc /etc/environment /etc/security/environ /etc/csh.login /etc/csh.cshrc \( -perm -0645 -a ! -perm -1777 \) -exec ls -ld  {} \; | awk '$3 !~ /root/ && $4 !~ /root|bin|sys/ {print $9}' 2>&1
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11983 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11983
+      All global initialization files must be owned by root.
+      All global initialization files must be group-owned by root, sys, or bin
+      If any global initialization file exists and is not owned by root, this is a finding.
+      If any global initialization file exists and is not group-owned by root, sys, or bin, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>All global initialization file that exist are group owned by sys</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+      
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-11983 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11983
+      All global initialization files must be owned by root.
+      All global initialization files must be group-owned by root, sys, or bin
+      If any global initialization file exists and is not owned by root, this is a finding.
+      If any global initialization file exists and is not group-owned by root, sys, or bin, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>NOT all global initialization file that exist are group owned by sys</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-11983 Fix-1
+  file: path="{{item}}" group=sys owner=root mode=0644 state=file
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

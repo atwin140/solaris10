@@ -1,0 +1,113 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12011 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12011"
+      rule_id="SV-12512r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All FTP users must have a default umask of 077.</title>
+      <discussion>The umask controls the default access mode assigned to newly created files.  An umask of 077 limits new files to mode 700 or less permissive.  Although umask is stored as a 4-digit number, the first digit representing special access modes is typically ignored or required to be 0.</discussion>
+      <check_content>Check the umask setting for the FTP user.
+
+      Procedure:
+      # su - ftp
+      $ umask
+
+      If the umask value does not return 077, this is a finding.</check_content>
+
+- name: V-12011 Check
+  shell: if [ "$(awk '/^ftp/' /etc/passwd)" = "" ] ; then echo Not a finding; else { echo "umask"; sleep 1; } | su - ftp | awk "/077/"; fi
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12011 Check 2
+  shell: if [ "$(awk '/^ftp/' /etc/passwd)" = "" ] ; then echo Not a finding; else { echo "umask"; sleep 1; } | su - ftp | awk "/077/"; fi 
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12011 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12011
+      All FTP users must have a default umask of 077.
+      If the umask value does not return 077, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>No ftp user</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+ # when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+# - name: V-12011 Fail
+#   blockinfile:
+#     dest: "{{out_file}}"
+#     state: present
+#     marker: " "
+#     block: |
+#       <procedure> <![CDATA[
+#       Procedure: 
+#       # {{ checkmyconf1.cmd }} ]]>
+#       </procedure>
+#       <output> 
+#       V-12011
+#       All FTP users must have a default umask of 077.
+#       If the umask value does not return 077, this is a finding.
+
+#       <![CDATA[
+#       Procedure: 
+#       # {{ checkmyconf1.cmd }} 
+#       OUTPUT:
+#       ->  {{ checkmyconf1.stdout }}
+#       ]]>====================================================================
+#       This is a FINDING
+#       -
+#       </output>
+#       <comments>No ftp user</comments>
+#       <status>Ongoing</status>
+#       <ccis>
+#       <cci>CCI-000225</cci>
+#       </ccis>
+#       </finding>
+#   when: checkmyconf2.stdout == ""
+

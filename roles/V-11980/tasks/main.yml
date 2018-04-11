@@ -1,0 +1,117 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11980 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11980"
+      rule_id="SV-39850r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must log successful and unsuccessful access to the root account.</title>
+      <discussion>If successful and unsuccessful logins and logouts are not monitored or recorded, access attempts cannot be tracked.  Without this logging, it may be impossible to track unauthorized access to the system.</discussion>
+      <check_content>Check the following log files to determine if access to the root account is being logged.  Try to su - and enter an incorrect password.
+      # more /var/adm/sulog
+      If root login accounts are not being logged, this is a finding.</check_content>
+      <fix_text>Update /etc/default/su and set SYSLOG=YES.
+
+      Ensure /etc/syslog.conf is configured to log auth.crit messages to capture all failed su attempts.</fix_text>
+      <procedure>{ Procedure goes here }</procedure>
+
+
+- name: V-11980 Check
+  shell: awk '/root/'  /var/adm/sulog | wc -l
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11980 Check 2
+  shell: awk '/root/'  /var/adm/sulog | wc -l | awk '!/       0/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11980 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11980
+      The system must log successful and unsuccessful access to the root account.
+      If root login accounts are not being logged, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>All su attempts log both success and fails</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000126</cci>
+      </ccis>
+      </finding>
+
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-11980 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11980
+      The system must log successful and unsuccessful access to the root account.
+      If root login accounts are not being logged, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>All su attempts are not logged both success and fails</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000126</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-11980 Fix-1
+  lineinfile: dest=/etc/default/su state=present regexp=^SYSLOG line="SYSLOG=YES"
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)

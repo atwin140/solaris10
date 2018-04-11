@@ -1,0 +1,131 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11979 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11979"
+      rule_id="SV-39848r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The root account must not be used for direct logins.</title>
+      <discussion>Direct login with the root account prevents individual user accountability. Acceptable non-routine uses of the root account for direct login are limited to emergency maintenance, the use of single-user mode for maintenance, and situations where individual administrator accounts are not available.</discussion>
+      <check_content>Check if the root is used for direct logins.
+
+      Procedure:
+      # last root | grep -v reboot
+
+      If any direct login records for root exist, this is a finding.
+
+      Verify the root user is configured as a role, rather than a normal user.
+
+      Procedure:
+      # egrep '^root:' /etc/user_attr
+
+      If the returned line does not include "type=role", this is a finding.
+      </check_content>
+      <fix_text>Convert the root user into a role.
+      # usermod -K type=role root
+
+      Add the root role to authorized users' logins.
+      # usermod -R root &lt;userid&gt;</fix_text>
+
+
+- name: V-11979 Check
+  shell: egrep '^root:' /etc/user_attr 
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11979 Check 2
+  shell: egrep '^root:' /etc/user_attr | awk '/type=role/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11979 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11979
+      The root account must not be used for direct logins.
+      If the returned line does not include "type=role", this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Root is set as a role</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000770</cci>
+      </ccis>
+      </finding>
+
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-11979 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11979
+      The root account must not be used for direct logins.
+      If the returned line does not include "type=role", this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Root is Not set as a role</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000770</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-11979 Fix-1
+  lineinfile: dest=/etc/user_attr state=present regexp=^root line="root::::auths=solaris.*,solaris.grant;profiles=Web Console Management,All;lock_after_retries=no;min_label=admin_low;clearance=admin_high,type=role"
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)

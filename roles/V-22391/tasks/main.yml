@@ -1,0 +1,123 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22391 Check
+  shell:  ls -lL /etc/cron.d/cron.allow 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22391 Check 2
+  shell: ls -lL /etc/cron.d/cron.allow | awk '$4 !~ /root|sys|dba/ {print $9}'
+  args:
+    executable: /bin/bash
+#  stat: path=/etc/passwd
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22391 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding 
+      v_id="V-22391"
+      rule_id="SV-26553r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The cron.allow file must be group-owned by root, bin, or sys.</title>
+      <discussion>If the group of the cron.allow is not set to root, bin, or sys, the possibility exists for an unauthorized user to view or edit the list of users permitted to use cron.  Unauthorized modification of this file could cause Denial of Service to authorized cron users or provide unauthorized users with the ability to run cron jobs.</discussion>
+      <check_content>Check the group ownership of the file.
+
+      Procedure:
+      # ls -lL /etc/cron.d/cron.allow
+
+      If the file is not group-owned by root, bin, or sys, this is a finding.</check_content>
+      <fix_text>Change the group ownership of the file.
+
+      Procedure:
+      # chgrp root /etc/cron.d/cron.allow</fix_text>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+
+- name: V-22391 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+        <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+        </procedure>
+        <output> 
+        V-22391
+        The cron.allow file must be group-owned by root, bin, or sys.
+        If the file is not group-owned by root, bin, or sys, this is a finding.
+
+        <![CDATA[
+        OUTPUT:
+        ->  {{ checkmyconf1.stdout }}
+        ]]>-
+        This is NOT a finding
+        -
+        </output>
+        <comments>/etc/cron.d/cron.allow is group owned by root</comments>
+        <status>Not a Finding</status>
+        </finding>
+  when: checkmyconf2.stdout != ""
+#  when: checkmyconf2.stat.uid == 0
+
+  # Other options:"Ongoing", "Not Reviewed", or "Not Applicable"
+        
+- name: V-22391 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+        <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+        </procedure>
+        <output> 
+        V-22391
+        The cron.allow file must be group-owned by root, bin, or sys.
+        If the file is not group-owned by root, bin, or sys, this is a finding.
+        
+        <![CDATA[
+        OUTPUT:
+        ->  {{ checkmyconf1.stdout }}
+        ]]>-
+        This is NOT a finding
+        -
+        </output>
+        <comments>/etc/cron.d/cron.allow is group owned by root</comments>
+        <status>Not a Finding</status>
+        </finding>     
+  when: checkmyconf2.stdout == ""
+#  when: checkmyconf2.stat.uid == 0
+
+- name: V-22391 Fix-1
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)
+  file: path="{{item}}" group=root state=file
+  with_items: "{{checkmyconf2.stdout_lines}}"

@@ -1,0 +1,114 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22399 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22399"
+      rule_id="SV-26576r2_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must be configured to store any process core dumps in a specific, centralized directory.</title>
+      <discussion>Specifying a centralized location for core file creation allows for the centralized protection of core files.  Process core dumps contain the memory in use by the process when it crashed.  Any data the process was handling may be contained in the core file, and it must be protected accordingly.  If process core dump creation is not configured to use a centralized directory, core dumps may be created in a directory that does not have appropriate ownership or permissions configured, which could result in unauthorized access to the core dumps.</discussion>
+      <check_content>Verify a directory is defined for process core dumps.
+
+      # grep COREADM_GLOB_PATTERN /etc/coreadm.conf
+
+      If the parameter is not an absolute path (does not start with a slash [/]), this is a finding.</check_content>
+      <fix_text>Change the core file pattern.
+      # coreadm -g /var/core/core.%f.%p
+
+      Then:
+      # coreadm -u
+      In order to force a reload of the configuration.</fix_text>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+
+- name: V-22399 Check
+  shell: grep COREADM_GLOB_PATTERN /etc/coreadm.conf 2>&1
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22399 Check 2
+  shell: grep COREADM_GLOB_PATTERN /etc/coreadm.conf | awk '!/\=\//'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22399 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22399
+      The system must be configured to store any process core dumps in a specific, centralized directory.
+      If the parameter is not an absolute path (does not start with a slash [/]), this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>COREADM_GLOB_PATTERN is set to an absolute path</comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22399 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22399
+      The system must be configured to store any process core dumps in a specific, centralized directory.
+      If the parameter is not an absolute path (does not start with a slash [/]), this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>COREADM_GLOB_PATTERN is NOT set to an absolute path</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22399 Fix-1
+  shell:  coreadm -g /var/core/core.%f.%p; coreadm -u
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

@@ -1,0 +1,116 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12021 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12021"
+      rule_id="SV-28431r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The syslog daemon must not accept remote messages unless it is a syslog server documented using site-defined procedures.</title>
+      <discussion>Unintentionally running a syslog server accepting remote messages puts the system at increased risk.  Malicious syslog messages sent to the server could exploit vulnerabilities in the server software itself, could introduce misleading information in to the system's logs, or could fill the system's storage leading to a Denial of Service.</discussion>
+      <check_content># svcprop system-log | grep log_from_remote
+
+      If the config/log_from_remote value is not false, this is a finding.
+      </check_content>
+      <fix_text># svccfg -s system-log setprop config/log_from_remote=false
+      # svcadm refresh system-log</fix_text>
+
+- name: V-12021 Check
+  shell: svcprop system-log | grep log_from_remote
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12021 Check 2
+  shell: svcprop system-log | grep log_from_remote | awk '/false/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12021 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12021
+      The syslog daemon must not accept remote messages unless it is a syslog server documented using site-defined procedures.
+      If the config/log_from_remote value is not false, this is a finding. 
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>log_from_remote is set to false</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-12021 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12021
+      The syslog daemon must not accept remote messages unless it is a syslog server documented using site-defined procedures.
+      If the config/log_from_remote value is not false, this is a finding. 
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>log_from_remote is NOT set to false</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-12021 Fix-1
+  shell:  svccfg -s system-log setprop config/log_from_remote=false; svcadm refresh system-log
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)

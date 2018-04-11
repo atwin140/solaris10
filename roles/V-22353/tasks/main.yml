@@ -1,0 +1,118 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22353 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22352"
+      rule_id="SV-26456r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All files and directories contained in user home directories must not have extended ACLs.</title>
+      <discussion>Excessive permissions allow unauthorized access to user files.</discussion>
+      <check_content>Check the contents of interactive user's home directories (99 &lt; UID &lt; 60000) for files with extended ACLs. 
+
+      # ls -alLR &lt; users home dir &gt;
+
+      If the permissions include a "+", the file has an extended ACL and this is a finding.</check_content>
+      <fix_text>Remove the extended ACL from the file.
+      # chmod A- [user file with extended ACL]</fix_text>
+
+
+- name: V-22353 Check
+  shell: ls -lL /etc/rc* /etc/init.d | awk '$1 ~ /\+/'
+
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22353 Check 2
+  shell: ls -lL /etc/rc* /etc/init.d | awk '$1 ~ /\+/ {print $9}'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22353 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22353
+      All run control scripts must have no extended ACLs.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>No ACLs are present on the run control scripts</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+      when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22353 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22353
+      All run control scripts must have no extended ACLs.
+      If the permissions include a "+", the file has an extended ACL and this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>ACLs are present on the run control scripts</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+      when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+  when: checkmyconf2.stdout != ""
+
+- name: V-22353 Fix-1
+  shell:  chmod A- "{{item}}"
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

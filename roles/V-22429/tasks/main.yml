@@ -1,0 +1,110 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22429 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22429"
+      rule_id="SV-26664r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The portmap or rpcbind service must not be running unless needed.</title>
+      <discussion>The portmap and rpcbind services increase the attack surface of the system and should only be used when needed.  The portmap or rpcbind services are used by a variety of services using remote procedure calls (RPCs).</discussion>
+      <check_content>Check the status of the rpcbind service.
+
+      # svcs network/rpc/bind
+
+      If the service is online and is not documented as required, this is a finding.</check_content>
+      <fix_text>Disable the portmap service.
+      # svcadm disable network/rpc/bind</fix_text>
+      <ccis>
+      <cci>CCI-001436</cci>
+      </ccis>
+
+- name: V-22429 Check
+  shell: svcs network/rpc/bind
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22429 Check 2
+  shell: svcs network/rpc/bind | awk '!/online/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22429 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22429
+      The portmap or rpcbind service must not be running unless needed.
+      If the service is online and is not documented as required, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>bind is required for proper system operation in this environment and is documented as such on the Unix Team Page</comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22429 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22429
+      The portmap or rpcbind service must not be running unless needed.
+      If the service is online and is not documented as required, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>bind is required for proper system operation in this environment and is documented as such on the Unix Team Page</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22429 Fix-1
+  shell:  echo #svcadm disable network/rpc/bind
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

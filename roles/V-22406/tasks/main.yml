@@ -1,0 +1,120 @@
+###############################################
+  # Developed For 7.2.4 by Andrew Darley     
+  #     andrew.darley.ctr@navy.mil  
+  #      
+  # Originally created for:
+  # Solaris 10 x86/SPARC Manual STIG - Ver 1
+  # Release: 19 Benchmark Date: 28 Jul 2017
+  # 
+  # This is expected to run with a play book that
+  # defines these variables
+  # output_path
+  # out_file
+  # FIX
+  ###############################################
+  
+  - name: V-22406 Finding Open Tags
+    blockinfile:
+      dest: "{{out_file}}"
+      state: present
+      marker: " "
+      block: |
+        <finding
+        v_id="V-22406"
+        rule_id="SV-26614r1_rule"
+        raw_risk="III"
+        datetime="{{ ansible_date_time.date }}">
+        <title>The kernel core dump data directory must have mode 0700 or less permissive.</title>
+        <discussion>Kernel core dumps may contain the full contents of system memory at the time of the crash.  As the system memory may contain sensitive information, it must be protected accordingly.  If the mode of the kernel core dump data directory is more permissive than 0700, unauthorized users may be able to view or to modify kernel core dump data files.</discussion>
+        <check_content>Determine the kernel core dump data directory. 
+
+        # dumpadm | grep "Savecore directory"
+        OR
+        # grep DUMPADM_SAVDIR /etc/dumpadm.conf
+
+        Check the permissions of the kernel core dump data directory.
+        # ls -l [savecore directory]
+        If the directory has a mode more permissive than 0700, this is a finding.</check_content>
+        <fix_text>Change the group-owner of the kernel core dump data directory.
+        # chmod 0700 [kernel core dump data directory]</fix_text>
+        <ccis>
+        <cci>CCI-000225</cci>
+        </ccis>
+
+
+  - name: V-22406 Check
+    shell: grep DUMPADM_SAVDIR /etc/dumpadm.conf | awk "-F=" '{print $2}' | xargs ls -ld
+    register: checkmyconf1
+    ignore_errors: True
+    changed_when: False
+
+  - name: V-22406 Check 2
+    shell: grep DUMPADM_SAVDIR /etc/dumpadm.conf | awk "-F=" '{print $2}'
+    register: checkmyconf2
+    ignore_errors: True
+    changed_when: False
+
+  - name: V-22406 Check 3
+    stat: path="{{checkmyconf2.stdout}}"
+    register: checkmyconf3
+    ignore_errors: True
+    changed_when: False
+
+  - name: V-22406 Pass
+    blockinfile:
+      dest: "{{out_file}}"
+      state: present
+      marker: " "
+      block: |
+        <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+        </procedure>
+        <output> 
+        V-22406
+        The kernel core dump data directory must have mode 0700 or less permissive.
+        If the directory has a mode more permissive than 0700, this is a finding.
+
+        <![CDATA[
+        OUTPUT:
+        ->  {{ checkmyconf1.stdout }}
+        ]]>-
+        This is NOT a finding
+        -
+        </output>
+        <comments>the dump directory is not more permissive than 0700</comments>
+        <status>Not a Finding</status>
+        </finding>
+    when: (checkmyconf3.stat.mode == "0700" and REPORT == 1)
+
+  - name: V-22406 Fail
+    blockinfile:
+      dest: "{{out_file}}"
+      state: present
+      marker: " "
+      block: |
+        <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+        </procedure>
+        <output> 
+        V-22406
+        The kernel core dump data directory must have mode 0700 or less permissive.
+        If the directory has a mode more permissive than 0700, this is a finding.
+
+        <![CDATA[
+        OUTPUT:
+        ->  {{ checkmyconf1.stdout }}
+        ]]>====================================================================
+        This is a FINDING
+        -
+        </output>
+        <comments>the dump directory is more permissive than 0700</comments>
+        <status>Ongoing</status>
+        </finding>
+    when: checkmyconf3.stat.mode != "0700"
+
+  - name: V-22406 Fix
+    file: dest={{ checkmyconf2.stdout }} state=directory mode=0700
+    when: (checkmyconf1.stdout != "" and FIX == 1)
+

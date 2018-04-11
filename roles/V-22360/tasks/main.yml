@@ -1,0 +1,119 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22360 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22360"
+      rule_id="SV-39839r3_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>Global initialization files lists of preloaded libraries must contain only authorized paths.</title>
+      <discussion>The library preload list environment variable contains a list of libraries for the dynamic linker to load before loading the libraries required by the binary. If this list contains paths to libraries to the current working directory that have not been authorized, unintended libraries may be preloaded. This variable is formatted as a space-separated list of libraries. Paths starting with a slash (/) are absolute paths.</discussion>
+      <check_content>Check the global initialization files' library preload list. 
+
+      Procedure:
+      # grep LD_PRELOAD /etc/profile /etc/bashrc /etc/csh.login /etc/csh.cshrc /etc/environment /etc/.login /etc/security/environ 
+
+      This variable is formatted as a colon-separated list of paths.
+
+      If there is an empty entry, such as a leading or trailing colon, or two consecutive colons, this is a finding.
+
+      If an entry begins with a character other than a slash (/), or has not been documented with the ISSO, this is a finding.</check_content>
+      <fix_text>Edit the global initialization file(s) and remove the relative path entry from the library preload list variables that have not been documented with the ISSO.
+
+      Edit the global initialization file(s) and remove any empty entry that is defined.
+      </fix_text>
+
+- name: V-22360 Check
+  shell: grep LD_LIBRARY_PATH /etc/profile /etc/bashrc /etc/csh.login /etc/csh.cshrc /etc/environment /etc/.login /etc/security/environ 2>&1
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22360 Check 2
+  shell: grep LD_LIBRARY_PATH /etc/profile /etc/bashrc /etc/csh.login /etc/csh.cshrc /etc/environment /etc/.login /etc/security/environ 2>/dev/null | grep -i path
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22360 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22360 
+      Global initialization files library search paths must contain only authorized paths.
+      If there is an empty entry, such as a leading or trailing colon, or two consecutive colons, this is a finding. 
+
+      If an entry begins with a character other than a slash (/), or has not been documented with the ISSO, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>LD_PRELOAD is not set in /etc/profile /etc/bashrc /etc/csh.login /etc/csh.cshrc /etc/environment /etc/.login /etc/security/environ</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22360 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22360 
+      Global initialization files library search paths must contain only authorized paths.
+      If there is an empty entry, such as a leading or trailing colon, or two consecutive colons, this is a finding. 
+
+      If an entry begins with a character other than a slash (/), or has not been documented with the ISSO, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>LD_PRELOAD is not set in /etc/profile /etc/bashrc /etc/csh.login /etc/csh.cshrc /etc/environment /etc/.login /etc/security/environ</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""

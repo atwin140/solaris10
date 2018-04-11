@@ -1,0 +1,110 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22385 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22385"
+      rule_id="SV-41044r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>Crontab files must be group-owned by root, sys, or the crontab creator's primary group.</title>
+      <discussion>To protect the integrity of scheduled system jobs and prevent malicious modification to these jobs, crontab files must be secured.</discussion>
+      <check_content>Check the group ownership of the crontab files.
+      # ls -lL /var/spool/cron/crontabs/
+      If the group owner is not root, sys, or the crontab owner's primary group, this is a finding.</check_content>
+      <fix_text>Change the group owner of the crontab file to root, sys, or the crontab's primary group.
+      Procedure:
+      # chgrp root [crontab file]</fix_text>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+
+- name: V-22385 Check
+  shell: ls -lL /var/spool/cron/crontabs/ 2>&1
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22385 Check 2
+  shell: ls -lL /var/spool/cron/crontabs/ | awk '$4 !~ /root|sys|dba/ {print $9}'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22385 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22385
+      Crontab files must be group-owned by root, sys, or the crontab creator's primary group.
+      If the group owner is not root, sys, or the crontab owner's primary group, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>The group ownership of the crontab files is root</comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22385 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22385
+      Crontab files must be group-owned by root, sys, or the crontab creator's primary group.
+      If the group owner is not root, sys, or the crontab owner's primary group, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>The group ownership of the crontab files is NOT root</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22385 Fix-1
+  file: path="{{item}}" group=root state=file
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

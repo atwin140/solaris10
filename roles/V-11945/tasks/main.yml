@@ -1,0 +1,101 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11945 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11945"
+      rule_id="SV-28610r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>A file integrity tool must be used at least weekly to check for unauthorized file changes, particularly the addition of unauthorized system libraries or binaries, or for unauthorized modification to authorized system libraries or binaries.</title>
+      <discussion>Changes in system libraries and binaries can indicate compromise or significant system events, such as patching needing to be checked by automated processes and the results reviewed by the SA.
+
+      NOTE: The frequency may be increased to daily, if necessary, in accordance with the contingency plan.</discussion>
+      <check_content>Determine if there is a cron job, scheduled to run weekly or more frequently, to run the file integrity tool to check for unauthorized system libraries or binaries, or unauthorized modification to authorized system libraries or binaries. 
+
+      Procedure:
+      # crontab -l
+
+      If there is no cron job meeting these requirements, this is a finding.
+
+      NOTE: The frequency may be increased to daily, if necessary, in accordance with the contingency plan.</check_content>
+      <fix_text>Create a cron job, scheduled to run weekly or more frequently, to run the file integrity tool to check for unauthorized system libraries or binaries, or unauthorized modification to authorized system libraries or binaries.
+
+      NOTE: The frequency may be increased to daily, if necessary, in accordance with the contingency plan.</fix_text>
+
+- name: V-11945 Check
+  shell: crontab -l | grep -i bart
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11945 Check 2
+  shell: crontab -l | awk '/bart/'
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11945 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> <![CDATA[
+      V-11945
+      A file integrity baseline must be created and maintained.
+
+      Bartlogs are installed and provideds the baseline.
+
+      Procedure:
+      # {{ checkmyconf1.cmd }}
+        OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      -
+      This is NOT a finding
+      -
+      ]]>
+      </output>
+      <comments>Bartlogs are set as needed up and provide file integrity checks.</comments>
+      <status>Not a Finding</status>
+      <ccis>
+        <cci>CCI-000293</cci>
+      </ccis>
+      </finding>
+      
+- name: V-11945 Fix-1
+  ignore_errors: True
+  cron:
+    name: BART Logs STIG# 11941 & 11945
+    weekday: 2
+    minute: 0
+    hour: 12
+    user: root
+    job: "/usr/bin/bart create -n -r /root/bart_rules > /var/log/bartlogs/bart-`/usr/bin/hostname`-`/usr/bin/date +%y%b%d`"
+    state: present

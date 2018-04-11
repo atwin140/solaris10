@@ -1,0 +1,123 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11997 Check
+  shell: ls -ld /var/crash 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11997 Check 2
+  shell: ls -ld /var/crash 2>/dev/null | awk '$3 !~ /root/' 
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11997 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11997"
+      rule_id="SV-27407r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The kernel core dump data directory must be owned by root.</title>
+      <discussion>Kernel core dumps may contain the full contents of system memory at the time of the crash.  As the system memory may contain sensitive information, it must be protected accordingly. If the kernel core dump data directory is not owned by root, the core dumps contained in the directory may be subject to unauthorized access.</discussion>
+      <check_content>Check the ownership of the kernel core dump data directory.
+
+      # ls -ld /var/crash
+      OR
+      # ls -ld `grep DUMPADM_SAVDIR /etc/dumpadm.conf | cut -d= -f2`
+
+      If the kernel core dump data directory is not owned by root, this is a finding.</check_content>
+      <fix_text>Change the owner of the kernel core dump data directory to root. 
+      # chown root /var/crash</fix_text>
+
+
+- name: V-11997 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11997
+      The kernel core dump data directory must be owned by root.
+      If the kernel core dump data directory is not owned by root, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/var/crash is owned by root</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+        
+- name: V-11997 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11997
+      The kernel core dump data directory must be owned by root.
+      If the kernel core dump data directory is not owned by root, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/var/crash is owned by root</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-11997 Fix-1
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)
+  file: path=/var/crash group=root owner=root state=present

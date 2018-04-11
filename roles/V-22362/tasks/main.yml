@@ -1,0 +1,115 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22362 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22362"
+      rule_id="SV-26484r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>Local initialization files must not have extended ACLs.</title>
+      <discussion>Local initialization files are used to configure the user's shell environment upon login.  Malicious modification of these files could compromise accounts upon logon.</discussion>
+      <check_content>Check user home directories for local initialization files with extended ACLs.
+      # cut -d : -f 6 /etc/passwd | xargs -n1 -IDIR ls -alL DIR/.login DIR/.cshrc DIR/.logout DIR/.profile DIR/.bash_profile DIR/.bashrc DIR/.bash_logout DIR/.env DIR/.dtprofile DIR/.dispatch DIR/.emacs DIR/.exrc
+
+      If the permissions include a "+", the file has an extended ACL, this is a finding.
+
+      </check_content>
+      <fix_text>Remove the extended ACL from the file.
+      # chmod A- [local initialization file with extended ACL]</fix_text>
+
+- name: V-22362 Check
+  shell: awk "-F:" '$3 > 100 && $7 !~ /false/ && $6 !~ /\/$/ && $1 !~ /ldap/  {print $4 " "$1 "  " $6}' /etc/passwd  | while read GRUP USER HOME;   do printf $HOME" "$USER" "$GRUP" ";   awk "-F:" '/'$USER'/ {print $3"|"var}' var=$GRUP /etc/group | paste -s -d\| -; done | while read HOME USER GRUP UGRP;   do find $HOME -exec ls -ldn {} 2>/dev/null | awk '$1 ~ /\+/ {print "chmod A- " $9}' 2>/dev/null; done
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22362 Check 2
+  shell: awk "-F:" '$3 > 100 && $7 !~ /false/ && $6 !~ /\/$/ && $1 !~ /ldap/  {print $4 " "$1 "  " $6}' /etc/passwd  | while read GRUP USER HOME;   do printf $HOME" "$USER" "$GRUP" ";   awk "-F:" '/'$USER'/ {print $3"|"var}' var=$GRUP /etc/group | paste -s -d\| -; done | while read HOME USER GRUP UGRP;   do find $HOME -exec ls -ldn {} 2>/dev/null | awk '$1 ~ /\+/ {print "chmod A- " $9}' 2>/dev/null; done
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22362 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22362
+      Local initialization files must not have extended ACLs
+      If the permissions include a "+", the file has an extended ACL, this is a finding
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Local initialization files do not have extend ACLs</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22362 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22362
+      Local initialization files must not have extended ACLs
+      If the permissions include a "+", the file has an extended ACL, this is a finding
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>Local initialization files DO have extend ACLs</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22362 Fix-1
+  shell: "{{item}}" 
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

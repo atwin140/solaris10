@@ -1,0 +1,123 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22401 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22401"
+      rule_id="SV-26582r2_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The centralized process core dump data directory must be group-owned by root, bin, or sys.</title>
+      <discussion>Process core dumps contain the memory in use by the process when it crashed.  Any data the process was handling may be contained in the core file, and it must be protected accordingly.  If the centralized process core dump data directory is not group-owned by a system group, the core dumps contained in the directory may be subject to unauthorized access.</discussion>
+      <check_content>Check the defined directory for process core dumps.
+
+      # coreadm | grep "global core file pattern"
+      OR 
+      # grep COREADM_GLOB_PATTERN /etc/coreadm.conf
+
+      Check the group ownership of the directory.
+      # ls -lLd [core file directory]
+      If the directory is not group-owned by root, bin, or sys, this is a finding.</check_content>
+      <fix_text>Change the group-owner of the core file directory.
+      # chgrp root [core file directory]</fix_text>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+
+- name: V-22401 Check
+  shell: grep COREADM_GLOB_PATTERN /etc/coreadm.conf; ls -ld /var/core/
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22401 Check 2
+  shell: ls -ld /var/core/ | awk '$3 !~ /root/ || $4 !~ /root/ || $1 ~ /\+/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22401 Check 3
+  stat: path=/var/core
+  register: checkmyconf3
+  ignore_errors: True
+  changed_when: False
+
+
+- name: V-22401 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22401
+      The centralized process core dump data directory must be group-owned by root, bin, or sys.
+      If the directory is not group-owned by root, bin, or sys, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }} 
+      Mode = {{checkmyconf3.stat.mode}}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/var/core is group owned by root</comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout == "" and checkmyconf3.stat.mode =="0700" and REPORT == 1)
+
+- name: V-22401 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22401
+      The centralized process core dump data directory must be group-owned by root, bin, or sys.
+      If the directory is not group-owned by root, bin, or sys, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }} 
+      Mode = {{checkmyconf3.stat.mode}}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>/var/core is group owned by root</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: (checkmyconf2.stdout != "" or checkmyconf3.stat.mode !="0700" )
+
+- name: V-22401 Fix-1
+  file: path=/var/core group=root owner=root mode=0700 state=directory
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" or checkmyconf3.stat.mode !="0700" and FIX == 1)

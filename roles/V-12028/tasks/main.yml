@@ -1,0 +1,62 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12028 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12028"
+      rule_id="SV-41530r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system vulnerability assessment tool, host-based intrusion detection tool, and file integrity tool must notify the SA and the IAO of a security breach or a suspected security breach.</title>
+      <discussion>Timely notifications of potential security compromises minimize the potential damage.
+
+      Minimally, the system must log these events and the SA and the IAO will receive the notifications during the daily system log review.  If feasible, active alerting (such as email or paging) should be employed consistent with the site’s established operations management systems and procedures.</discussion>
+      <check_content>For each security tool on the system, determine if the tool is configured to notify the IAO and SA of any detected security problem.  If such notifications are not configured, this is a finding.</check_content>
+      <fix_text>Configure the security tools on the system to notify the IAO and SA when any security issues are detected.</fix_text>
+
+- name: V-12028 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      #  ]]>
+      </procedure>
+      <output> 
+      V-12028
+      The system vulnerability assessment tool, host-based intrusion detection tool, and file integrity tool must notify the SA and the IAO of a security breach or a suspected security breach.
+
+      HBSS is installed and meets the requirements for this STIG.
+
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>This is handled by HBSS which notifies the CND team of any security breach or a suspected security breach</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      <cci>CCI-001266</cci>
+      </ccis>
+      </finding>
+

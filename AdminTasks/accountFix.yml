@@ -1,0 +1,58 @@
+#####
+# Setup the connections and type
+#####
+#- hosts: all
+#  user: scanuser
+#  become_user: root
+#  become_method: su
+  
+
+# Setup the output dir and report file  
+  vars:
+    output_path: /audit/admin/stigs/
+    out_file: "{{output_path}}AccountFix-Report.txt"
+    FIX: 1
+
+# Start of the AccountFixs to run.
+  AccountFixs:
+
+    # reset the file is delete it and recreate the file
+    
+  - name: Prep Remove old Output file
+    file: path={{out_file}} state=absent
+
+  - name: Prep create Output Dir
+    file: path={{output_path}} state=directory
+
+  - name: Prep create Output file
+    file: path={{out_file}} state=touch
+
+    # AccountFixs to run
+  - name: AccountFix
+    shell: /audit/Admin_Scripts/./Unlock_Admins.sh
+    args:
+      executable: /bin/bash
+    register: checkmyconf1
+    ignore_errors: True
+    changed_when: False
+
+  - name: AccountFix Report
+    blockinfile:
+      dest: "{{out_file}}"
+      state: present
+      marker: " "
+      block: |
+        ####
+        {{ansible_hostname}}
+        # {{ checkmyconf1.cmd }}
+        OUTPUT:
+        ->  {{ checkmyconf1.stdout }}   
+  
+  - name: Send mail
+    mail:
+      host: localhost
+      port: 25
+      to: andrew.darley.ctr@navy.mil
+      subject: Ansible-report for AccountFix for {{ ansible_hostname }}
+      body: 'System {{ ansible_hostname }} results are attached.'
+      attach: "{{out_file}}"

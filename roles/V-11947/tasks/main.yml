@@ -1,0 +1,119 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11947 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11947"
+      rule_id="SV-27110r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must require passwords contain a minimum of 15 characters.</title>
+      <discussion>The use of longer passwords reduces the ability of attackers to successfully obtain valid passwords using guessing or exhaustive search techniques by increasing the password search space.</discussion>
+      <check_content>Check the system password length setting.
+      # grep PASSLENGTH /etc/default/passwd
+      If PASSLENGTH is not set to 15 or more, this is a finding.</check_content>
+      <fix_text>Edit /etc/default/passwd and set the PASSLENGTH variable to 15 or greater.</fix_text>
+
+- name: V-11947 Check
+  shell: grep PASSLENGTH /etc/default/passwd
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11947 Check 2
+  shell: grep PASSLENGTH /etc/default/passwd | awk '/PASSLENGTH=15/'
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11947 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> <![CDATA[
+      V-11947
+      The system must require passwords contain a minimum of 15 characters.
+      If PASSLENGTH is not set to 15 or more, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      ]]\>  
+      </output>
+      <comments>PASSLENGTH is set to 15 or higher</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000205</cci>
+      </ccis>
+      </finding>
+      
+  when: (checkmyconf2.stdout == "PASSLENGTH=15" and REPORT == 1)
+
+- name: V-11947 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> <![CDATA[
+      V-11947
+      The system must require passwords contain a minimum of 15 characters.
+      If PASSLENGTH is not set to 15 or more, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      ]]\>  
+      </output>
+      <comments>PASSLENGTH is Not set to 15 or higher</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000205</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != "PASSLENGTH=15"
+
+- name: V-11947 Fix-1
+  lineinfile: dest=/etc/default/passwd state=present regexp=PASSLENGT line="PASSLENGTH=15"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "PASSLENGTH=15" and FIX == 1)

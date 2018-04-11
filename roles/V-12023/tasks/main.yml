@@ -1,0 +1,116 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12023 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12023"
+      rule_id="SV-28581r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>IP forwarding for IPv4 must not be enabled, unless the system is a router.</title>
+      <discussion>If the system is configured for IP forwarding and is not a designated router, it could be used to bypass network security by providing a path for communication not filtered by network devices.</discussion>
+      <check_content>Determine if the system is configured for IPv4 forwarding.
+      # svcs | grep svc:/network/ipv4-forwarding
+      If the service is enabled, this is a finding.</check_content>
+      <fix_text>Disable IPv4 forwarding on the system.
+      # svcadm disable svc:/network/ipv4-forwarding
+      </fix_text>
+
+- name: V-12023 Check
+  shell: svcs -a | grep svc:/network/ipv4-forwarding
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12023 Check 2
+  shell: svcs | grep svc:/network/ipv4-forwarding
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12023 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12023
+      IP forwarding for IPv4 must not be enabled, unless the system is a router.
+      If the service is enabled, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>svc:/network/ipv4-forwarding is not eneabled</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-12023 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12023
+      IP forwarding for IPv4 must not be enabled, unless the system is a router.
+      If the service is enabled, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>svc:/network/ipv4-forwarding is eneabled</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-12023 Fix-1
+  shell: svcadm disable svc:/network/ipv4-forwarding 
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

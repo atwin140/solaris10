@@ -1,0 +1,55 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11940 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11940"
+      rule_id="SV-27051r1_rule"
+      raw_risk="I"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The operating system must be a supported release.</title>
+      <discussion>An operating system release is considered supported if the vendor continues to provide security patches for the product.  With an unsupported release, it will not be possible to resolve security issues discovered in the system software.</discussion>
+      <check_content># uname -a
+
+      Oracle has committed to indefinite "sustaining support" for recent Solaris operating system releases.  Verify proof of purchase of support from Oracle.
+
+      If the release is not supported, this is a finding.</check_content>
+      <fix_text>Upgrade to a supported version of the operating system.</fix_text>
+      <procedure>
+      Procedure: 
+      # uname -a
+      </procedure>
+      <output>
+      V-11940
+      The operating system must be a supported release.
+      If the release is not supported, this is a finding.
+
+      Patches are applied quarterly and verified with ACAS. This confirms that this is a supported version of the OS.
+      -
+      This is NOT a finding
+      - 
+      </output>
+      <comments>System is running a supported release of the OS </comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001230</cci>
+      </ccis>
+      </finding>

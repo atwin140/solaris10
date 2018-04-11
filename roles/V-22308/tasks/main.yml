@@ -1,0 +1,119 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22308 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22308"
+      rule_id="SV-39876r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must restrict the ability to switch to the root user to members of a defined group.</title>
+      <discussion>Configuring a supplemental group for users permitted to switch to the root user prevents unauthorized users from accessing the root account, even with knowledge of the root credentials.</discussion>
+      <check_content>Verify the root user is configured as a role, rather than a normal user.
+      # egrep '^root:' /etc/user_attr
+      If the returned line does not include "type=role", this is a finding.
+
+      Verify at least one local user has been assigned the root role.
+      # egrep '[:;]roles=[^;]*,?root([,;]|$)' /etc/user_attr
+      If no lines are returned, no users are permitted to assume the root role, this is a finding.</check_content>
+      <fix_text>Convert the root user into a role.
+      # usermod -K type=role root
+
+      Add the root role to authorized users' logins.
+      # usermod -R root &lt;userid&gt;</fix_text>
+
+- name: V-22308 Check
+  shell: egrep '^root:' /etc/user_attr; egrep '[:;]roles=[^;]*,?root([,;]|$)' /etc/user_attr
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22308 Check 2
+  shell: "{ egrep '^root:' /etc/user_attr; egrep '[:;]roles=[^;]*,?root([,;]|$)' /etc/user_attr | head -1; } | wc -l | awk '/2/'"
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22308 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22308
+      The system must restrict the ability to switch to the root user to members of a defined group.
+      If the returned line does not include "type=role", this is a finding.
+      If no lines are returned, no users are permitted to assume the root role, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>root is configured as a role and there are users assigned to the root role as well</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000009</cci>
+      </ccis>
+      </finding>  
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-22308 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22308
+      The system must restrict the ability to switch to the root user to members of a defined group.
+      If the returned line does not include "type=role", this is a finding.
+      If no lines are returned, no users are permitted to assume the root role, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>root is NOT configured as a role and there are users assigned to the root role as well</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000009</cci>
+      </ccis>
+      </finding> 
+  when: checkmyconf2.stdout == ""

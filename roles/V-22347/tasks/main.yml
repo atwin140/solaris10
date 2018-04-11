@@ -1,0 +1,115 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22347 Check
+  shell: "cut -d : -f 2 /etc/passwd | grep -v '^x$' 2>&1"
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22347 Check 2
+  shell: "cut -d : -f 2 /etc/passwd | grep -v '^x$' 2>/dev/null"
+  args:
+    executable: /bin/bash
+#  stat: path=/etc/passwd
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22347 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding 
+      v_id="V-22347"
+      rule_id="SV-26467r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The /etc/passwd file must not contain password hashes.</title>
+      <discussion>If password hashes are readable by non-administrators, the passwords are subject to attack through lookup tables or cryptographic weaknesses in the hashes.</discussion>
+      <check_content>Verify no password hashes are present in /etc/passwd.
+      # cut -d : -f 2 /etc/passwd | grep -v '^x$'
+      If any password hashes are returned, this is a finding.</check_content>
+      <fix_text>Migrate /etc/passwd password hashes to /etc/shadow.
+      # pwconv   </fix_text>
+
+- name: V-22347 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22347
+      The /etc/passwd file must not contain password hashes.
+      If any password hashes are returned, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>No hashes were returned from the passwd file </comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000201</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+#  when: checkmyconf2.stat.uid == 0
+
+  # Other options:"Ongoing", "Not Reviewed", or "Not Applicable"
+        
+- name: V-22347 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22347
+      The /etc/passwd file must not contain password hashes.
+      If any password hashes are returned, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      Ansible will not fix this
+      </output>
+      <comments>Hashes were returned from the passwd file </comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000201</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""

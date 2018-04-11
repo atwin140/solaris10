@@ -1,0 +1,64 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: Prep
+  file: path={{out_file}} state=absent
+- file: path={{out_file}} owner=darleya group=14 state=touch
+
+
+- service: name=svc:/system/system-log:default state=stopped
+
+- name: IP-address
+  shell: printf "{" ; /usr/sbin/arp `hostname`-ss| /bin/awk '{printf $2}'; printf "}"
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: MAC-address
+  shell: printf "{" ; /usr/sbin/arp `hostname`-ss| /bin/awk '{printf $4}'; printf "}"
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: Line-1
+  shell: printf '<?xml version="1.0" encoding="UTF-8"?>' >> "{{out_file}}"
+  args:
+    executable: /bin/bash
+  ignore_errors: True
+
+- name: Prep Finding Open Tags SPARC
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: ""
+    block: |
+      <ansible hostname="{{ansible_nodename}}" ip_address="{{ checkmyconf1.stdout }}" mac_address="{{ checkmyconf2.stdout }}">
+      <stig name="SOLARIS 10 SPARC SECURITY TECHNICAL IMPLEMENTATION GUIDE" version="1" release="17">
+  when: (ansible_machine == "sun4v" or ansible_machine == "sun4u")
+
+- name: Prep Finding Open Tags X86
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: ""
+    block: |
+      <ansible hostname="{{ansible_nodename}}" ip_address="{{ checkmyconf1.stdout }}" mac_address="{{ checkmyconf2.stdout }}">
+      <stig name="SOLARIS 10 X86 SECURITY TECHNICAL IMPLEMENTATION GUIDE 27 Oct 2017" version="1" release="20">
+  when: ansible_machine == "i86pc" 

@@ -1,0 +1,72 @@
+###############################################
+  # Developed For 7.2.4 by Andrew Darley     
+  #     andrew.darley.ctr@navy.mil  
+  #      
+  # Originally created for:
+  # Solaris 10 x86/SPARC Manual STIG - Ver 1
+  # Release: 19 Benchmark Date: 28 Jul 2017
+  # 
+  # This is expected to run with a play book that
+  # defines these variables
+  # output_path
+  # out_file
+  # FIX
+  ###############################################
+
+- name: V-22422 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22422"
+      rule_id="SV-26638r3_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All local file systems must employ journaling or another mechanism ensuring file system consistency.</title>
+      <discussion>File system journaling, or logging, can allow reconstruction of file system data after a system crash, thus preserving the integrity of data that may have otherwise been lost.  Journaling file systems typically do not require consistent checks upon booting after a crash, which can improve system availability.  Some file systems employ other mechanisms to ensure consistency which also satisfy this requirement.</discussion>
+      <check_content>Verify local file systems use journaling or another mechanism ensuring file system consistency.
+
+      Procedure:
+      # mount -v | grep '^/dev/' | egrep -v '(logging|vxfs|zfs|devfs)' | grep -v /dev/fd
+
+      If a mount is listed, this is a finding.</check_content>
+      <ccis>
+      <cci>CCI-000553</cci>
+      </ccis>
+
+- name: V-22422 Check
+  shell: mount -v | grep '^/dev/' | egrep -v '(logging|vxfs|zfs|devfs)' | grep -v /dev/fd 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22422 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22422
+      All local file systems must employ journaling or another mechanism ensuring file system consistency.
+      Verify local file systems use journaling or another mechanism ensuring file system consistency.
+      All file systems are ZFS or VXFS both of which use journaling by default.
+      -
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>no mounts are listed </comments>
+      <status>Not a Finding</status>
+      </finding>

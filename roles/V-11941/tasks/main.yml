@@ -1,0 +1,95 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11941 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11941"
+      rule_id="SV-12442r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>A file integrity baseline must be created and maintained.</title>
+      <discussion>A file integrity baseline is a collection of file metadata which is to evaluate the integrity of the system. A minimal baseline must contain metadata for all device files, setuid files, setgid files, system libraries, system binaries, and system configuration files. The minimal metadata must consist of the mode, owner, group owner, and modification times. For regular files, metadata must also include file size and a cryptographic hash of the file’s contents.</discussion>
+      <check_content>Determine if a file integrity baseline, which includes cryptographic hashes, has been created and maintained for the system. If no file integrity baseline exists for the system, this is a finding. If the file integrity baseline contains no cryptographic hashes, this is a finding. If the file integrity baseline is not maintained (has not been updated to be consistent with the latest approved system configuration changes), this is a finding.</check_content>
+      <fix_text>Create a file integrity baseline, including cryptographic hashes, for the system. </fix_text>
+      <ccis>
+      <cci>CCI-000293</cci>
+      </ccis>
+
+
+- name: V-11941 Check
+  shell: crontab -l | grep -i bart
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11941 Check 2
+  shell: crontab -l | awk '/bart/'
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+
+- name: V-11941 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> <![CDATA[
+      V-11941
+      A file integrity baseline must be created and maintained.
+
+      Bartlogs are installed and provideds the baseline.
+
+      Procedure:
+      # {{ checkmyconf1.cmd }}
+        OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      -
+      This is NOT a finding
+      -
+      ]]>
+      </output>
+      <comments>Bartlogs are set as needed up and provide file integrity checks.</comments>
+      <status>Not a Finding</status>
+      <ccis>
+        <cci>CCI-000293</cci>
+      </ccis>
+      </finding>
+
+- name: V-11941 Fix-1
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)
+  cron:
+    name: BART Logs STIG# 11941 & 11945
+    weekday: 2
+    minute: 0
+    hour: 12
+    user: root
+    job: "/usr/bin/bart create -n -r /root/bart_rules > /var/log/bartlogs/bart-`/usr/bin/hostname`-`/usr/bin/date +%y%b%d`"

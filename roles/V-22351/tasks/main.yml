@@ -1,0 +1,118 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+- name: V-22351 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22351"
+      rule_id="SV-39877r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All files and directories contained in user home directories must be group-owned by a group of which the home directory's owner is a member.</title>
+      <discussion>If a user's files are group-owned by a group of which the user is not a member, unintended users may be able to access them.</discussion>
+      <check_content>Check the contents of user home directories for files group-owned by a group of which the home directory's owner is not a member.
+
+      1. List the user accounts.
+      # cut -d : -f 1/etc/passwd
+      2. For each user account, get a list of GIDs for files in the user's home directory.
+      # find &lt; users home directory &gt; -exec ls -lLd \;
+      3. Obtain the list of GIDs associated with the user's account.
+      # id  &lt; user name &gt;
+      4. Check the GID lists. If there are GIDs in the file list not present in the user list, this is a finding.</check_content>
+      <fix_text>Change the group of a file not group-owned by a group where the home directory's owner is a member.
+      # chgrp &lt; user's primary group &gt; &lt;file with bad group ownership &gt;</fix_text>
+
+
+- name: V-22351 Check
+  shell: awk "-F:" '$3 > 100 && $7 !~ /false/ && $6 !~ /\/$/ {print $4 " "$1 "  " $6}' /etc/passwd  | while read GRUP USER HOME; do printf $HOME" "$USER" "$GRUP" "; awk "-F:" '/'$USER'/ {print $3"|"var}' var=$GRUP /etc/group | paste -s -d\| -;  done | while read HOME USER GRUP UGRP; do find $HOME -exec ls -ldn {} \; 2>/dev/null | awk '$4 !~ /'$UGRP'/ {print  user ":" grup "   " $0}' user=$USER grup=$GRUP 2>/dev/null;  done
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22351 Check 2
+  shell: awk "-F:" '$3 > 100 && $7 !~ /false/ && $6 !~ /\/$/ && $1 !~ /ldap/  {print $4 " "$1 "  " $6}' /etc/passwd  | while read GRUP USER HOME; do printf $HOME" "$USER" "$GRUP" "; awk "-F:" '/'$USER'/ {print $3"|"var}' var=$GRUP /etc/group | paste -s -d\| -;  done | while read HOME USER GRUP UGRP; do find $HOME -exec ls -ldn {} \; 2>/dev/null | awk '$4 !~ /'$UGRP'|root/ {print "chown " user ":" grup " " $9}' user=$USER grup=$GRUP 2>/dev/null;  done
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22351 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22351
+      All files and directories contained in user home directories must be group-owned by a group of which the home directory's owner is a member.
+      If there are GIDs in the file list not present in the user list, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Files and directories are group owned by user's primary group</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22351 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22351
+      All files and directories contained in user home directories must be group-owned by a group of which the home directory's owner is a member.
+      If there are GIDs in the file list not present in the user list, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>Files and directories are NOT group owned by user's primary group</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22351 Fix-1
+  shell:  "{{item}}"
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

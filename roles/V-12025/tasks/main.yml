@@ -1,0 +1,78 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12025 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12025"
+      rule_id="SV-12526r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must not have any peer-to-peer file-sharing application installed.</title>
+      <discussion>Peer-to-peer file-sharing software can result in the unintentional exfiltration of information.  There are also many legal issues associated with these types of utilities including copyright infringement or other intellectual property issues.  The ASD Memo "Use of Peer-to-Peer (P2P) File-Sharing Applications across the DoD" states the following:
+
+      “P2P file-sharing applications are authorized for use on DoD networks with approval by the appropriate Designated Approval Authority (DAA).  Documented requirements, security architecture, configuration management process, and a training program for users are all requirements within the approval process.  The unauthorized use of application or services, including P2P applications, is prohibited, and such applications or services must be eliminated.”
+
+      P2P applications include, but are not limited to, the following:
+
+      -Napster,
+      -Kazaa,
+      -ARES,
+      -Limewire,
+      -IRC Chat Relay, and
+      -BitTorrent.</discussion>
+      <check_content>Ask the SA if any peer-to-peer file-sharing applications are installed.  Some examples of these applications include:
+
+      - Napster,
+      - Kazaa,
+      - ARES,
+      - Limewire,
+      - IRC Chat Relay, and
+      - BitTorrent.
+
+      If any of these applications are installed, this is a finding.</check_content>
+      <fix_text>Uninstall the peer-to-peer file sharing application(s) from the system.</fix_text>
+
+- name: V-12025 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # ]]>
+      </procedure>
+      <output> 
+      V-12025
+      The system must not have any peer-to-peer file-sharing application installed.
+
+      No peer-to-peer file sharing software was found to be installed on this system
+
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>No peer to peer file sharing applications are installed </comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001436</cci>
+      </ccis>
+      </finding>

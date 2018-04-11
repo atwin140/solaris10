@@ -1,0 +1,128 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22355 Check
+  shell: find /etc/rc* /etc/init.d -type f -print | xargs grep LD_PRELOAD 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22355 Check 2
+  shell: >-
+        find /etc/rc* /etc/init.d -type f -exec grep LD_PRELOAD {} \; | awk '/::|:/' 
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22355 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding 
+      v_id="V-22355"
+      rule_id="SV-26464r3_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>Run control scripts lists of preloaded libraries must contain only authorized paths.</title>
+      <discussion>The library preload list environment variable contains a list of libraries for the dynamic linker to load before loading the libraries required by the binary. If this list contains paths to libraries to the current working directory that have not been authorized, unintended libraries may be preloaded. This variable is formatted as a space-separated list of libraries. Paths starting with a slash (/) are absolute paths.</discussion>
+      <check_content>Verify run control scripts' library preload list. 
+
+      Procedure:
+      # find /etc/rc* /etc/init.d -type f -print | xargs grep LD_PRELOAD
+
+
+      This variable is formatted as a colon-separated list of paths.
+
+      If there is an empty entry, such as a leading or trailing colon, or two consecutive colons, this is a finding.
+
+      If an entry begins with a character other than a slash (/), or has not been documented with the ISSO, this is a finding.
+      </check_content>
+      <fix_text>Edit the run control script and remove the relative path entry from the library preload variables that are not documented with the ISSO. 
+
+      Edit the run control script and remove any empty entry that is defined.
+      </fix_text>
+
+- name: V-22355 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22355
+      Run control scripts lists of preloaded libraries must contain only authorized paths.
+      If there is an empty entry, such as a leading or trailing colon, or two consecutive colons, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>No leading or trailing colon, or two consecutive colons are set
+      LD_PROLOAD is set via NetIQ according to directions from Oracle </comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+#  when: checkmyconf2.stat.uid == 0
+
+  # Other options:"Ongoing", "Not Reviewed", or "Not Applicable"
+        
+- name: V-22355 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22355
+      Run control scripts lists of preloaded libraries must contain only authorized paths.
+      If there is an empty entry, such as a leading or trailing colon, or two consecutive colons, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      Manual Fixing is required.
+      </output>
+      <comments>Leading or trailing colon, or two consecutive colons are set
+      LD_PROLOAD is set via NetIQ according to directions from Oracle </comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""

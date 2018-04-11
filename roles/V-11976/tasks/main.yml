@@ -1,0 +1,73 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11976 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11976"
+      rule_id="SV-39845r3_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>User passwords must be changed at least every 60 days.</title>
+      <discussion>Limiting the lifespan of authenticators limits the period of time an unauthorized user has access to the system while using compromised credentials and reduces the period of time available for password-guessing attacks to run against a single password.</discussion>
+      <check_content>Check the max days field (the 5th field) of /etc/shadow.
+      # awk -F: '{print $1 ":" $5;}' /etc/shadow
+      If the max days field is equal to 0 or greater than 60 for any account that is not password-locked, this is a finding.</check_content>
+      <fix_text>Set the max days field to 60 for all user accounts.
+      # passwd -x 60 &lt;user&gt; 
+      Set the MAXWEEKS parameter in /etc/default/passwd to a positive, non-zero value of 8 or less.</fix_text>
+
+
+- name: V-11976 Check
+  shell: awk "-F:" '$5 > 60 {print $1 ":" $5;}' /etc/shadow
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11976 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11976
+      User passwords must be changed at least every 60 days.
+      If the max days field is equal to 0 or greater than 60 for any account that is not password-locked, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>All interactive account passwords are set to expire overy 60 days</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000180</cci>
+      </ccis>
+      </finding>

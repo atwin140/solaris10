@@ -1,0 +1,58 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11977 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11977"
+      rule_id="SV-12478r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All non-interactive/automated processing account passwords must be changed at least once per year or be locked.</title>
+      <discussion>Limiting the lifespan of authenticators limits the period of time an unauthorized user has access to the system while using compromised credentials and reduces the period of time available for password-guessing attacks to run against a single password. Locking the password for non-interactive and automated processing accounts is preferred as it removes the possibility of accessing the account by a password. On some systems, locking the passwords of these accounts may prevent the account from functioning properly. Passwords for non-interactive/automated processing accounts must not be used for direct logon to the system.</discussion>
+      <check_content>Ask the SA if there are any automated processing accounts on the system. If there are automated processing accounts on the system, ask the SA if the passwords for those automated accounts are changed at least once a year. If SA indicates passwords for automated processing accounts are not changed once per year, this is a finding.
+      </check_content>
+      <fix_text>Implement or establish procedures to change the passwords of automated processing accounts at least once per year.</fix_text>
+
+- name: V-11977 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> 
+      Procedure: 
+      # On file with the IAO 
+      </procedure>
+      <output> 
+      V-11977
+      All non-interactive/automated processing account passwords must be changed at least once per year or be locked.
+
+      This system uses automated processing accounts. A record of these accounts has been filed with the IAO, and their passwords are changed yearly or more frequently, as needed.
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>Accounts are on file with the IAO</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000199</cci>
+      </ccis>
+      </finding>

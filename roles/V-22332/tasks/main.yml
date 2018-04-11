@@ -1,0 +1,118 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22332 Check
+  shell: ls -l /etc/passwd 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22332 Check 2
+  stat: path=/etc/passwd
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22332 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding 
+      v_id="V-22332"
+      rule_id="SV-26425r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The /etc/passwd file must be owned by root.</title>
+      <discussion>The /etc/passwd file contains the list of local system accounts.  It is vital to system security and must be protected from unauthorized modification.</discussion>
+      <check_content>Verify the /etc/passwd file is owned by root.
+
+      Procedure:
+      # ls -l /etc/passwd
+      If the file is not owned by root, this is a finding.</check_content>
+      <fix_text>Change the owner of the /etc/passwd file to root.
+
+      # chown root /etc/passwd</fix_text>
+
+
+- name: V-22332 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      The /etc/passwd file must be owned by root.
+      If the file is not owned by root, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>etc/passwd is owned by root</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stat.uid == 0
+
+        
+- name: V-22332 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      The /etc/passwd file must be owned by root.
+      If the file is not owned by root, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>etc/passwd is NOT owned by root</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stat.uid != 0
+
+- name: V-22332 Fix-1
+  ignore_errors: True
+  when: (checkmyconf2.stat.uid != 0 and FIX == 1)
+  file: path=/etc/passwd group=root owner=root mode=0664 

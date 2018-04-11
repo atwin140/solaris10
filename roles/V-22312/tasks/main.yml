@@ -1,0 +1,104 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22312 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22312"
+      rule_id="SV-26358r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All files and directories must have a valid group-owner.</title>
+      <discussion>Files without a valid group-owner may be unintentionally inherited if a group is assigned the same GID as the GID of the files without a valid group-owner.</discussion>
+      <check_content>Search the system for files without a valid group-owner.
+      # find / -nogroup -print
+      If any files are found, this is a finding.</check_content>
+      <fix_text>Change the group owner for each file without a valid group owner.
+      # chgrp &lt;a-valid-group&gt; /tmp/a-file-without-a-valid-group-owner   </fix_text>
+
+- name: V-22312 Check
+  shell: ls / | while read DIR; do find /$DIR  -fstype nfs -prune -o -fstype objfs -prune -o -fstype proc -prune -type f -type d -nogroup -exec ls -ld {} \; ; done
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22312 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22312
+      All files and directories must have a valid group-owner.
+      If any files are found, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>No files are found with invalid group ownership</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf1.stdout == "" and REPORT == 1)
+
+- name: V-22312 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22312
+      All files and directories must have a valid group-owner.
+      If any files are found, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>Files are found with invalid group ownership</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf1.stdout != ""

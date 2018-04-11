@@ -1,0 +1,100 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-780 Check
+  shell: awk "-F:" '$3 < 100 {print $3 " - "$1}' /etc/group | awk '$3 !~ /^root$|^other$|^bin$|^sys$|^adm$|^uucp$|^mail$|^tty$|^lp$|^nuucp$|^staff$|^daemon$|^sysadmin$|^smmsp$|^gdm$|^webservd$|^postgres$|^unknown$|^netadm$|^mlocate$/'
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-780 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-780"
+      rule_id="SV-28658r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>GIDs reserved for system accounts must not be assigned to non-system groups.</title>
+      <discussion>Reserved GIDs are typically used by system software packages.  If non-system groups have GIDs in this range, they may conflict with system software, possibly leading to the group having permissions to modify system files.</discussion>
+      <check_content># more /etc/passwd 
+      Confirm all accounts with a GID of 99 and below are used by a system account. If a GID reserved for system accounts (0 - 99)  is used by a non-system account, this is a finding. </check_content>
+      <fix_text>Change the primary group GID numbers for non-system accounts with reserved primary group GIDs (those less or equal to 99).
+
+      # usermod -g &lt;new_group&gt; &lt;user&gt;</fix_text>
+
+- name: V-780 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+      Procedure: 
+      # awk "-F:" '$3 &lt; 100 {print $3 " - "$1}' /etc/group | awk '$3 !~ /^root$|^other$|^bin$|^sys$|^adm$|^uucp$|^mail$|^tty$|^lp$|^nuucp$|^staff$|^daemon$|^sysadmin$|^smmsp$|^gdm$|^webservd$|^postgres$|^unknown$|^netadm$|^mlocate$/'
+      </procedure>
+      <output>
+      V-780
+      GIDs reserved for system accounts must not be assigned to non-system groups.
+      If any results are returned this needs to be reviewd and many be a finding
+      Procedure:
+      # awk "-F:" '$3 &lt; 100 {print $3 " - "$1}' /etc/group | awk '$3 !~ /^root$|^other$|^bin$|^sys$|^adm$|^uucp$|^mail$|^tty$|^lp$|^nuucp$|^staff$|^daemon$|^sysadmin$|^smmsp$|^gdm$|^webservd$|^postgres$|^unknown$|^netadm$|^mlocate$/'
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>The concern with conflict of group numbers less than 99 is mitigated in multiple ways. First this is a Solaris created group ID so it is a known used group from the vendor so they would not supply conflicting group IDs for other system groups. </comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf1.stdout == "" and REPORT == 1)
+
+- name: V-780 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+      Procedure: 
+      # awk "-F:" '$3 &lt; 100 {print $3 " - "$1}' /etc/group | awk '$3 !~ /^root$|^other$|^bin$|^sys$|^adm$|^uucp$|^mail$|^tty$|^lp$|^nuucp$|^staff$|^daemon$|^sysadmin$|^smmsp$|^gdm$|^webservd$|^postgres$|^unknown$|^netadm$|^mlocate$/'
+      </procedure>
+      <output>
+      V-780
+      GIDs reserved for system accounts must not be assigned to non-system groups.
+      If any results are returned this needs to be reviewd and many be a finding
+      Procedure:
+      # awk "-F:" '$3 &lt; 100 {print $3 " - "$1}' /etc/group | awk '$3 !~ /^root$|^other$|^bin$|^sys$|^adm$|^uucp$|^mail$|^tty$|^lp$|^nuucp$|^staff$|^daemon$|^sysadmin$|^smmsp$|^gdm$|^webservd$|^postgres$|^unknown$|^netadm$|^mlocate$/'
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>The concern with conflict of group numbers less than 99 is mitigated in multiple ways. First this is a Solaris created group ID so it is a known used group from the vendor so they would not supply conflicting group IDs for other system groups. </comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf1.stdout != ""

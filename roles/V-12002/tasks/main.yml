@@ -1,0 +1,129 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12002 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12002"
+      rule_id="SV-27420r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must not forward IPv4 source-routed packets.</title>
+      <discussion>Source-routed packets allow the source of the packet to suggest that routers forward the packet along a different path than configured on the router, which can be used to bypass network security measures.  This requirement applies only to the forwarding of source-routed traffic, such as when IPv4 forwarding is enabled and the system is functioning as a router.</discussion>
+      <check_content>Determine the type of zone that you are currently securing.
+      # zonename
+
+      If the zone is not the global zone, determine if any interfaces are exclusive to the zone:
+      # dladm show-link
+
+      If the output indicates "insufficient privileges" then this requirement is not applicable.
+
+      If the zone is the global zone or the non-global zone has exclusive interfaces verify the network settings: 
+
+      # ndd /dev/ip ip_forward_src_routed
+      If the returned value is not 0, this is a finding.</check_content>
+      <fix_text>Configure the system to not forward IPv4 source-routed packets.
+      Procedure:
+      # ndd /dev/ip ip_forward_src_routed 0
+
+      This command must also be added to a system startup script.</fix_text>
+
+- name: V-12002 Check
+  shell: if [ `zonename` = global ]; then  ndd /dev/ip ip_forward_src_routed ; else echo Not a global zone `zonename`; fi
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12002 Check 2
+  shell: if [ `zonename` = global ]; then  ndd /dev/ip ip_forward_src_routed ; else echo Not a global zone `zonename`; fi | awk '/0|Not/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12002 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12002
+      The system must not forward IPv4 source-routed packets.
+      If this is a non-global zone this does not apply
+      If the returned value is not 0, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/dev/ip ip_forward_src_routed is set to 0</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001551</cci>
+      </ccis>
+      </finding>  
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-12002 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12002
+      The system must not forward IPv4 source-routed packets.
+      If this is a non-global zone this does not apply
+      If the returned value is not 0, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>/dev/ip ip_forward_src_routed is NOT set to 0</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-001551</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-12002 Fix-1
+  shell:  ndd /dev/ip ip_forward_src_routed 0
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)

@@ -1,0 +1,127 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12014 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12014"
+      rule_id="SV-12515r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All .Xauthority files must have mode 0600 or less permissive.</title>
+      <discussion>.Xauthority files ensure the user is authorized to access the specific X Windows host.  Excessive permissions may permit unauthorized modification of these files, which could lead to Denial of Service to authorized access or allow unauthorized access to be obtained.</discussion>
+      <check_content>Check the file permissions for the .Xauthority files in the home directories of users of X.
+
+      Procedure:
+      # cd ~&lt;X user&gt;
+      # ls -lL .Xauthority
+
+      If the file mode is more permissive than 0600, this is finding.
+      </check_content>
+      <fix_text>Change the mode of the .Xauthority files.
+
+      Procedure:
+      # chmod 0600 .Xauthority</fix_text>
+
+- name: V-12014 Check
+  shell: awk "-F:" '$3 > 100 && $7 !~ /false/ && $6 !~ /\/$/ && $1 !~ /ldap|root/  {print $4 " "$1 "  " $6}' /etc/passwd  | while read GRUP USER HOME;   do ls -lLa $HOME/.Xauthority 2>/dev/null; done
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12014 Check 2
+  shell: awk "-F:" '$3 > 100 && $7 !~ /false/ && $6 !~ /\/$/ && $1 !~ /ldap|root/  {print $4 " "$1 "  " $6}' /etc/passwd  | while read GRUP USER HOME;   do ls -lLa $HOME/.Xauthority 2>/dev/null; done | awk '!/-rw-------/ {print $9}'
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12014 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12014
+      All .Xauthority files must have mode 0600 or less permissive.
+      If the file mode is more permissive than 0600, this is finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>File modes are not more permissive than 0600</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-12014 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12014
+      All .Xauthority files must have mode 0600 or less permissive.
+      If the file mode is more permissive than 0600, this is finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>File modes are more permissive than 0600</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-12014 Fix-1
+  file: path="{{item}}" mode=0600 
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

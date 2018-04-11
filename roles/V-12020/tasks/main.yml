@@ -1,0 +1,60 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12020 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12020"
+      rule_id="SV-41515r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must not be used as a syslog server (log host) for systems external to the enclave.</title>
+      <discussion>Syslog messages are typically unencrypted and may contain sensitive information and are, therefore, restricted to the enclave.</discussion>
+      <check_content>Ask the SA if the log host server is collecting data for hosts outside the local enclave.  If it is, this is a finding.</check_content>
+      <fix_text>Configure the hosts outside of the local enclave to not log to this system.</fix_text>
+
+
+- name: V-12020 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # Not a log server ]]>
+      </procedure>
+      <output> 
+      V-12020
+        The system must not be used as a syslog server (log host) for systems external to the enclave.
+        Ask the SA if the log host server is collecting data for hosts outside the local enclave. If it is, this is a finding.
+
+        The log host server is only collecting data for hosts within the local enclave.
+      -
+      This is NOT a finding
+      -
+      </output>
+      <comments>Loghost is in the local enclave</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+

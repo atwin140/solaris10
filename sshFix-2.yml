@@ -1,0 +1,81 @@
+#####
+# Setup the connections and type
+#####
+- hosts: sol11
+  user: scanuser
+  become_user: root
+  become_method: su
+
+
+# Setup the output dir and report file
+  vars:
+    output_path: /audit/admin/stigs/
+    out_file: "{{output_path}}SSH-Fix-Report.txt"
+    FIX: 1
+    
+
+# Start of the tasks to run.
+  tasks:
+
+    # reset the file is delete it and recreate the file
+  #- name: Prep Remove old Output file
+    #file: path={{out_file}} state=absent
+#
+  #- name: Prep create Output Dir
+    #file: path={{output_path}} state=directory
+#
+  #- name: Prep create Output file
+    #file: path={{out_file}} state=touch
+#
+    ## Tasks to run
+  #- name: SSH-Fix
+    #shell: awk '/PubkeyAuthentication/' /etc/ssh/sshd_config
+    #args:
+      #executable: /bin/bash
+    #register: checkmyconf1
+    #ignore_errors: True
+    #changed_when: False
+#
+  #- name: SSH-Fix Report
+    #blockinfile:
+      #dest: "{{out_file}}"
+      #state: present
+      #marker: " "
+      #block: |
+        #####
+        #{{ansible_hostname}}
+        ## {{ checkmyconf1.cmd }}
+        #OUTPUT:
+        #->  {{ checkmyconf1.stdout }}
+  - name: get DenyUsers
+    shell: awk '/PubkeyAuthentication/' /etc/ssh/sshd_config
+    args:
+      executable: /bin/bash
+    register: DenyUsers
+    ignore_errors: True
+    changed_when: False
+  #
+  - name: SSHKeys Fix-1
+    ignore_errors: True
+    template:
+      src: sshd_config.j2
+      dest: /etc/ssh/sshd_config
+
+
+  - name: RSAKeys Fix-1
+    ignore_errors: True
+    lineinfile: dest=/etc/sd_pam.conf state=present regexp="LIST_OF_USERS" line="LIST_OF_USERS=scanuser:root:nz:sparesprod:nbisbackup:dsadm:maestro:oracle:chicoind:maint:twsman:maestro:nagios:bobjprod:sas:sassrv:sasdemo:lsfadmin:lasradm:lsfuser:infaprod:testusr:fmotuprod:mqm:bobjtdp:isenbep"
+    #lineinfile: dest=/etc/sd_pam.conf state=present regexp="LIST_OF_USERS" line="LIST_OF_USERS=scanuser:root:nz:sparesprod:nbisbackup:dsadm:adarley:maestro:drahtj:jdraht:grahamm:oracle:chicoind:maint:twsman:maestro:nagios:sont:pricketm:bobjprod:sas:sassrv:sasdemo:lsfadmin:lasradm:lsfuser:infaprod:testusr:fmotuprod:mqm:bobjtdp:isenbep"
+
+  - service: name=ssh state=restarted
+
+
+  #- name: Send mail
+    #mail:
+      #host: localhost
+      #port: 25
+      #to: andrew.darley.ctr@navy.mil
+      #subject: Ansible-report for SSH-Fix
+      #body: 'System {{ ansible_hostname }} results are attached.'
+      #attach: "{{out_file}}"
+###

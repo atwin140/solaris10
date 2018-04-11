@@ -1,0 +1,136 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22410 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22410"
+      rule_id="SV-26622r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must not respond to ICMPv4 echoes sent to a broadcast address.</title>
+      <discussion>Responding to broadcast Internet Control Message Protocol (ICMP) echoes facilitates network mapping and provides a vector for amplification attacks.</discussion>
+      <check_content>Determine the type of zone that you are currently securing.
+      # zonename
+
+      If the zone is not the global zone, determine if any interfaces are exclusive to the zone:
+      # dladm show-link
+
+      If the output indicates "insufficient privileges" then this requirement is not applicable.
+
+      If the zone is the global zone or the non-global zone has exclusive interfaces verify the system does not respond to ICMP ECHO_REQUESTs set to broadcast addresses.
+      # ndd /dev/ip ip_respond_to_echo_broadcast
+
+      If the result is not 0, this is a finding.</check_content>
+      <fix_text>Configure the system to not respond to ICMP ECHO_REQUESTs sent to broadcast addresses.
+      # ndd -set /dev/ip ip_respond_to_echo_broadcast 0
+      Also add this command to a system startup script.</fix_text>
+      <ccis>
+      <cci>CCI-001551</cci>
+      </ccis>
+
+- name: V-22410 Check
+  shell: if [ $(zonename) = "global" ];   then ndd /dev/ip ip_respond_to_echo_broadcast ;   else echo "This is a zone and not applicable `zonename`"; fi
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22410  Check 2
+  shell: if [ $(zonename) = "global" ];   then ndd /dev/ip ip_respond_to_echo_broadcast ;   else echo "0"; fi
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22410  Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22410 
+      The system must not respond to ICMPv4 echoes sent to a broadcast address.
+      Determine the type of zone that you are currently securing.
+      If the zone is the global zone or the non-global zone has exclusive interfaces verify the system does not respond to ICMP ECHO_REQUESTs set to broadcast addresses.
+      Procedure:
+      # if [ $(zonename) = "global" ]
+      #  then ndd /dev/ip ip_respond_to_echo_broadcast 
+      #  else echo "This is a zone and not applicable `zonename`"
+      # fi
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>ndd /dev/ip ip_respond_to_echo_broadcast returns 0</comments>
+      <status>Not a Finding</status>
+      </finding>
+  when: (checkmyconf2.stdout == "0" and REPORT == 1)
+
+- name: V-22410  Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22410 
+      The system must not respond to ICMPv4 echoes sent to a broadcast address.
+      Determine the type of zone that you are currently securing.
+      If the zone is the global zone or the non-global zone has exclusive interfaces verify the system does not respond to ICMP ECHO_REQUESTs set to broadcast addresses.
+      Procedure:
+      # if [ $(zonename) = "global" ]
+      #  then ndd /dev/ip ip_respond_to_echo_broadcast 
+      #  else echo "This is a zone and not applicable `zonename`"
+      # fi
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>ndd /dev/ip ip_respond_to_echo_broadcast returns 1</comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stdout != "0"
+
+- name: V-22410 Fix-1
+  shell:  ndd -set /dev/ip ip_respond_to_echo_broadcast 0
+  args:
+    executable: /bin/bash
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "0" and FIX == 1)

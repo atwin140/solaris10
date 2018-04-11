@@ -1,0 +1,83 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+- name: V-22370 Fix-1
+  file: path="{{item}}"  owner=root group=root mode=0750
+  ignore_errors: True
+  with_items:  
+    - /usr/sbin/auditd 
+    - /usr/sbin/audit 
+    - /usr/sbin/bsmrecord 
+    - /usr/sbin/auditreduce 
+    - /usr/sbin/praudit 
+    - /usr/sbin/auditconfig
+
+
+- name: V-22372 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22372"
+      rule_id="SV-26511r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>System audit tool executables must have mode 0750 or less permissive.</title>
+      <discussion>To prevent unauthorized access or manipulation of system audit logs, the tools for manipulating those logs must be protected.</discussion>
+      <check_content>Check the mode of audit tool executables.
+      # ls -l /usr/sbin/auditd /usr/sbin/audit /usr/sbin/bsmrecord /usr/sbin/auditreduce /usr/sbin/praudit /usr/sbin/auditconfig
+      If any listed file has a mode more permissive than 0750, this is a finding.</check_content>
+      <fix_text>Change the mode of the audit tool executable to 0750, or less permissive.
+      # chmod 0750 [audit tool executable]</fix_text>
+
+
+- name: V-22372 Check
+  shell: ls -l /usr/sbin/auditd /usr/sbin/audit /usr/sbin/bsmrecord /usr/sbin/auditreduce /usr/sbin/praudit /usr/sbin/auditconfig
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22372 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22372
+      System audit tool executables must have mode 0750 or less permissive.
+      If any listed file has a mode more permissive than 0750, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Files premissions are 750</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001493</cci>
+      </ccis>
+      </finding>
+  
+

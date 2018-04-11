@@ -1,0 +1,120 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12005 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12005"
+      rule_id="SV-27426r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>Inetd and xinetd must be disabled or removed if no network services utilizing them are enabled.</title>
+      <discussion>Unnecessary services should be disabled to decrease the attack surface of the system.</discussion>
+      <check_content>Determine if inetd is running,
+      # svcs -a | grep inetd
+      If inetd is not running, this check is not a finding.
+      # inetadm | grep -v disabled
+      If no enabled/online services are found, yet the inetd daemon is running, this is a finding.</check_content>
+      <fix_text>Disable the inetd service.
+
+      Procedure:
+      # svcadm disable inetd</fix_text>
+
+- name: V-12005 Check
+  shell: svcs -a | grep inetd;  inetadm | grep -v disabled
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12005 Check 2
+  shell: if [ "$ON" -gt "0" ];  then if [ "$ON" -lt "$ENABLED" ];    then echo Not a Finding;  fi;  else     echo Not Running; fi
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12005 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12005
+      Inetd and xinetd must be disabled or removed if no network services utilizing them are enabled.
+      If inetd is not running, this check is not a finding.
+      If no enabled/online services are found, yet the inetd daemon is running, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>inetd is running and online services are found</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000305</cci>
+      </ccis>
+      </finding>
+
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-12005 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12005
+      Inetd and xinetd must be disabled or removed if no network services utilizing them are enabled.
+      If inetd is not running, this check is not a finding.
+      If no enabled/online services are found, yet the inetd daemon is running, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>inetd is NOT running and online services are found</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000305</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-12005 Fix-1
+  shell:  svcadm enable inetd
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)

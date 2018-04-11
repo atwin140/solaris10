@@ -1,0 +1,99 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22430 Check
+  shell: svcs | grep rpc 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+  
+- name: V-22430 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding 
+      v_id="V-22430"
+      rule_id="SV-40810r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The portmap or rpcbind service must not be installed unless needed.</title>
+      <discussion>The portmap and rpcbind services increase the attack surface of the system and should only be used when needed.  The portmap or rpcbind services are used by a variety of services using Remote Procedure Calls (RPCs).</discussion>
+      <check_content>If the system needs the portmap service to operate, this is not applicable.  The rpcbind program is part of a core Solaris package and cannot be removed.  Verify the permissions on the rpcbind file.
+      # ls -lL /usr/sbin/rpcbind
+      If the rpcbind service is not required and the rpcbind file has non-zero permissions, this is a finding.</check_content>
+      <fix_text>Remove all permissions from the rpcbind file.
+
+      Procedure:
+      # chmod 0000 /usr/sbin/rpcbind</fix_text>
+      <ccis>
+      <cci>CCI-000305</cci>
+      </ccis>
+
+- name: V-22430 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22430
+      The portmap or rpcbind service must not be installed unless needed.
+      If the system needs the portmap service to operate, this is not applicable.
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/usr/sbin/rpcbind is required </comments>
+      <status>Not a Finding</status>
+      </finding>
+#  when: checkmyconf2.stdout != ""
+
+- name: V-22430 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22430
+      The portmap or rpcbind service must not be installed unless needed.
+      If the system needs the portmap service to operate, this is not applicable.
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>/usr/sbin/rpcbind is required </comments>
+      <status>Ongoing</status>
+      </finding>
+  when: checkmyconf2.stdout == "100"

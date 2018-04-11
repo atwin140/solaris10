@@ -1,0 +1,125 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22328 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22328"
+      rule_id="SV-39897r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The /etc/nsswitch.conf file must be group-owned by root, bin, or sys.</title>
+      <discussion>The nsswitch.conf file (or equivalent) configures the source of a variety of system security information including account, group, and host lookups.  Malicious changes could prevent the system from functioning or compromise system security.</discussion>
+      <check_content>Check the group ownership of the nsswitch.conf file.
+
+      Procedure:
+      # ls -lL /etc/nsswitch.conf
+
+      If the file is not group-owned by root, bin, or sys, this is a finding.</check_content>
+      <fix_text>Change the group owner of the /etc/nsswitch.conf file to root, bin, or sys.
+
+      Procedure:
+      # chgrp root /etc/nsswitch.conf</fix_text>
+
+- name: V-22328 Check
+  shell: ls -l /etc/nsswitch.conf
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22328 Check 2
+  stat: path=/etc/nsswitch.conf
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+
+- name: V-22328 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22328
+      The /etc/nsswitch.conf file must be group-owned by root, bin, or sys.
+
+      If the file is not group-owned by root, bin, or sys, this is a finding.
+      
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/etc/nsswitch.conf is group owned by root</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stat.gid == 0 and REPORT == 1)
+
+- name: V-22328 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22328
+      The /etc/nsswitch.conf file must be group-owned by root, bin, or sys.
+
+      If the file is not group-owned by root, bin, or sys, this is a finding.
+      
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>/etc/nsswitch.conf is NOT group owned by root</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stat.gid != 0 )
+
+- name: V-22328 Fix-1
+  file: path=/etc/nsswitch.conf group=root owner=root mode=0644 state=file
+  ignore_errors: True
+  #when: (checkmyconf2.stat.gid != "0" and FIX == 1)

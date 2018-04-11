@@ -1,0 +1,123 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22299 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22299"
+      rule_id="SV-26310r1_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must display the date and time of the last successful account login upon login.</title>
+      <discussion>Providing users with feedback on when account accesses last occurred facilitates user recognition and reporting of unauthorized account use.</discussion>
+      <check_content>Determine if the system displays the date and time of the last successful login upon logging in. This can be accomplished by logging into the system and verifying whether or not the necessary information is displayed. If the system does not provide this information upon login, this is a finding.
+
+      Last login information is provided automatically by the login(1) program for telnet and console login sessions.
+
+      Verify the SSH daemon is configured to display last login information.
+
+      # grep -i PrintLastLog /etc/ssh/sshd_config
+      If PrintLastLog is present in the configuration and not disabled, this is not a finding. Otherwise, this is a finding.</check_content>
+      <fix_text>Configure the system to display the date and time of the last successful login upon logging in.
+
+      Enable PrintLastLog in the SSH daemon.
+
+      To enable PrintLastLog in the SSH daemon, remove any lines disabling this option from /etc/ssh/sshd_config.</fix_text>
+
+- name: V-22299 Check
+  shell: grep -i PrintLastLog /etc/ssh/sshd_config
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22299 Check 2
+  shell: grep -i PrintLastLog /etc/ssh/sshd_config
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22299 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22299
+      The system must display the date and time of the last successful account login upon login.
+      If PrintLastLog is present in the configuration and not disabled, this is not a finding. Otherwise, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Server displays last login information</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000052</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22299 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22299
+      The system must display the date and time of the last successful account login upon login.
+      If PrintLastLog is present in the configuration and not disabled, this is not a finding. Otherwise, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Server displays last login information</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000052</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22299 Fix-1
+  lineinfile: dest=/etc/ssh/sshd_config state=absent regexp=PrintLastLog
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

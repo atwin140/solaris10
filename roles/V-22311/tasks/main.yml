@@ -1,0 +1,123 @@
+---
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22311 Check
+  shell: awk "-F:" '/root/ {print $6}' /etc/passwd 2>&1 | while read DIR; do grep -i LD_PRELOAD /root/.* 2>&1; done | awk "-F:" '{print $1}' 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22311 Check 2
+  shell: awk "-F:" '/root/ {print $6}' /etc/passwd 2>/dev/null | while read DIR; do grep -i LD_PRELOAD /root/.* 2>/dev/null; done | awk "-F:" '{print $1}' 2>/dev/null
+  args:
+    executable: /bin/bash
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22311 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22311"
+      rule_id="SV-26357r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The root account's list of preloaded libraries must be empty.</title>
+      <discussion>The library preload list environment variable contains a list of libraries for the dynamic linker to load before loading the libraries required by the binary.  If this list contains paths to libraries relative to the current working directory, unintended libraries may be preloaded.  This variable is formatted as a space-separated list of libraries.  Paths starting with (/) are absolute paths.</discussion>
+      <check_content>Verify the LD_PRELOAD environment variable is empty or not defined for the root user.
+      # echo $LD_PRELOAD
+      If a path list is returned, this is a finding.</check_content>
+      <fix_text>Edit the root user initialization files and remove any definition of LD_PRELOAD.</fix_text>
+
+
+- name: V-22311 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22311
+      The root account's list of preloaded libraries must be empty.
+      If a path list is returned, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>LD_PRELOAD is not set</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+  # Other options:"Ongoing", "Not Reviewed", or "Not Applicable"
+        
+- name: V-22311 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22311
+      The root account's list of preloaded libraries must be empty.
+      If a path list is returned, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>LD_PRELOAD is set</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22311 Fix-1
+  ignore_errors: True
+  lineinfile: dest="{{item}}" state=present regexp="LD_PRELOAD" line=""
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  when: checkmyconf2.stdout != ""

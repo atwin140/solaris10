@@ -1,0 +1,158 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22296 V-22294 V-22295 Fix-1
+  file: path=/etc/inet/ntp.conf group=root owner=root mode=0640 state=file
+  ignore_errors: True
+
+- name: V-22296 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22296"
+      rule_id="SV-26298r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The time synchronization configuration file (such as /etc/ntp.conf) must have mode 0640 or less permissive.</title>
+      <discussion>A synchronized system clock is critical for the enforcement of time-based policies and the correlation of logs and audit records with other systems.  If an illicit time source is used for synchronization, the integrity of system logs and the security of the system could be compromised.  If the configuration files controlling time synchronization are not protected, unauthorized modifications could result in the failure of time synchronization.</discussion>
+      <check_content>Verify the mode for the NTP configuration file is not more permissive than 0640.
+      # ls -l /etc/inet/ntp.conf
+
+      If the mode is more permissive than 0640, this is a finding.</check_content>
+      <fix_text>Change the mode of the NTP configuration file to 0640 or less permissive.
+      # chmod 0640 /etc/inet/ntp.conf
+      </fix_text>
+
+- name: V-22296 V-22294 V-22295 Check
+  shell: ls -l /etc/inet/ntp.conf
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22296 V-22294 V-22295 Check 2
+  stat: path=/etc/inet/ntp.conf
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22296 V-22294 V-22295 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22296
+      The time synchronization configuration file (such as /etc/ntp.conf) must have mode 0640 or less permissive.
+      If the mode is more permissive than 0640, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>ntp.conf is not more permissive than 0640</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+      <finding
+      v_id="V-22294"
+      rule_id="SV-26293r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The time synchronization configuration file (such as /etc/ntp.conf) must be owned by root.</title>
+      <discussion>A synchronized system clock is critical for the enforcement of time-based policies and the correlation of logs and audit records with other systems.  If an illicit time source is used for synchronization, the integrity of system logs and the security of the system could be compromised.  If the configuration files controlling time synchronization are not owned by a system account, unauthorized modifications could result in the failure of time synchronization.</discussion>
+      <check_content>Run ls -l /etc/inet/ntp.conf to display the owner of the NTP configuration file.  If the owner is not root, this is a finding.</check_content>
+      <fix_text>Change the owner of the NTP configuration file to root.
+      # chown root /etc/inet/ntp.conf</fix_text>
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22294
+      The time synchronization configuration file (such as /etc/ntp.conf) must be owned by root.
+      If the owner is not root, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>ntp.conf is owned by root</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+      <finding
+      v_id="V-22295"
+      rule_id="SV-26296r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The time synchronization configuration file (such as /etc/ntp.conf) must be group-owned by root, bin, or sys.</title>
+      <discussion>A synchronized system clock is critical for the enforcement of time-based policies and the correlation of logs and audit records with other systems.  If an illicit time source is used for synchronization, the integrity of system logs and the security of the system could be compromised.  If the configuration files controlling time synchronization are not owned by a system group, unauthorized modifications could result in the failure of time synchronization.</discussion>
+      <check_content>Check the group ownership of the NTP configuration file.
+
+      Procedure:
+      # ls -l /etc/inet/ntp.conf
+
+      If the group owner is not root, bin, or sys, this is a finding.</check_content>
+      <fix_text>Change the group owner of the NTP configuration file.
+
+      Procedure:
+      # chgrp root /etc/inet/ntp.conf</fix_text>
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22295
+      The time synchronization configuration file (such as /etc/ntp.conf) must be group-owned by root, bin, or sys.
+      If the configuration files controlling time synchronization are not owned by a system group, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>ntp.conf is group owned by root</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>

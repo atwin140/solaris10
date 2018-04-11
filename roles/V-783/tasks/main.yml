@@ -1,0 +1,72 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-783 Check
+  shell: smpatch analyze 2>\&1
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-783 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-783"
+      rule_id="SV-40813r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>System security patches and updates must be installed and up-to-date.</title>
+      <discussion>Timely patching is critical for maintaining the operational availability, confidentiality, and integrity of Information Technology (IT) systems. However, failure to keep operating system and application software patched is a common mistake made by IT professionals. New patches are released daily, and it is often difficult for even experienced system administrators to keep abreast of all the new patches. When new weaknesses in an operating system exist, patches are usually made available by the vendor to resolve the problems. If the most recent security patches and updates are not installed, unauthorized users may take advantage of weaknesses present in the unpatched software. The lack of prompt attention to patching could result in a system compromise.</discussion>
+      <check_content>Use the smpatch(1m) utility to check for available security updates from Oracle.
+      # smpatch analyze
+      If there are security updates available, this is a finding.</check_content>
+      <fix_text>Apply available security updates from Oracle.
+      # smpatch update</fix_text>
+
+
+- name: V-783 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure>
+      Procedure: 
+      # smpatch analyze 2>\&#38;1
+      </procedure>
+      <output>
+      V-783
+      System security patches and updates must be installed and up-to-date.
+      The smpatch tool does not work but we do have ACAS Scans and patching cycles
+      Solaris systems are patched at the interval deemed best practices by Oracle
+      Procedure:
+      # smpatch analyze 2>\&#38;1
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      -
+      This is NOT a finding
+      -
+
+      </output>
+      <comments>Solaris systems are patched at the interval deemed best practices by Oracle</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001227</cci>
+      </ccis>
+      </finding>

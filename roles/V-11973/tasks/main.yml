@@ -1,0 +1,112 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11973 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11973"
+      rule_id="SV-27123r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must require passwords to contain at least one special character.</title>
+      <discussion>To enforce the use of complex passwords, minimum numbers of characters of different classes are mandated.  The use of complex passwords reduces the ability of attackers to successfully obtain valid passwords using guessing or exhaustive search techniques.  Complexity requirements increase the password search space by requiring users to construct passwords from a larger character set than they may otherwise use.</discussion>
+      <check_content>Check the MINSPECIAL setting.
+      # grep MINSPECIAL /etc/default/passwd
+      If the MINSPECIAL setting is less than 1, this is a finding.</check_content>
+
+- name: V-11973 Check
+  shell: awk '/MINSPECIAL/' /etc/default/passwd
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11973 Check 2
+  shell: awk '/MINSPECIAL/' /etc/default/passwd
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11973 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11973
+      The system must require passwords to contain at least one special character.
+      If the MINSPECIAL setting is less than 1, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      - 
+      </output>
+      <comments>MINSPECIAL is set to equal to or greater than 1</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001619</cci>
+      </ccis>
+      </finding>
+      
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-11973 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11973
+      The system must require passwords to contain at least one special character.
+      If the MINSPECIAL setting is less than 1, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>MINSPECIAL is NoT set to equal to or greater than 1</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-001619</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout == ""
+
+- name: V-11973 Fix-1
+  lineinfile: dest=/etc/default/passwd state=present regexp=MINSPECIAL line="MINSPECIAL=1"
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)

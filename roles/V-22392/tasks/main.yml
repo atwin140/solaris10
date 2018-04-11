@@ -1,0 +1,109 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22392 Check
+  shell: ls -lL /etc/cron.d/at.deny 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22392 Check 2
+  stat: path=/etc/cron.d/at.deny
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22392 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding 
+      v_id="V-22392"
+      rule_id="SV-26556r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The at.deny file must have mode 0600 or less permissive.</title>
+      <discussion>The at daemon control files restrict access to scheduled job manipulation and must be protected.  Unauthorized modification of the at.deny file could result in Denial of Service to authorized at users or provide unauthorized users with the ability to run at jobs.</discussion>
+      <check_content>Check the permissions of the file.
+      # ls -lL /etc/cron.d/at.deny
+      If the file has a mode more permissive than 0600, this is a finding.</check_content>
+      <fix_text>Change the mode of the file.
+      # chmod 0600 /etc/cron.d/at.deny</fix_text>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+
+- name: V-22392 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+        <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+        </procedure>
+        <output> 
+        V-22392
+        The at.deny file must have mode 0600 or less permissive.
+        If the file has a mode more permissive than 0600, this is a finding.
+        <![CDATA[
+        OUTPUT:
+        ->  {{ checkmyconf1.stdout }}
+        ]]>-
+        This is NOT a finding
+        -
+        </output>
+        <comments>/etc/cron.d/at.deny is not more permissive than 0600</comments>
+        <status>Not a Finding</status>
+        </finding>      
+  when: checkmyconf2.stat.mode == '0600'
+
+        
+- name: V-22392 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+        <procedure> <![CDATA[
+        Procedure: 
+        # {{ checkmyconf1.cmd }} ]]>
+        </procedure>
+        <output> 
+        V-22392
+        The at.deny file must have mode 0600 or less permissive.
+        If the file has a mode more permissive than 0600, this is a finding.
+        <![CDATA[
+        OUTPUT:
+        ->  {{ checkmyconf1.stdout }}
+        ]]>====================================================================
+        This is a FINDING
+        -
+        </output>
+        <comments>/etc/cron.d/at.deny is not more permissive than 0600</comments>
+        <status>Ongoing</status>
+        </finding>
+  when: checkmyconf2.stat.mode != '0600'
+
+- name: V-22392 Fix-1
+  ignore_errors: True
+  when: (checkmyconf2.stat.mode != '0600' and FIX == 1)
+  file: path=/etc/cron.d/at.deny group=root owner=root mode=0600 state=file

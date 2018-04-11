@@ -1,0 +1,123 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22321 Check
+  shell: ls -l /etc/resolv.conf 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22321 Check 2
+  stat: path=/etc/resolv.conf
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22321 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22321"
+      rule_id="SV-26397r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The /etc/resolv.conf file must have mode 0644 or less permissive.
+      </title>
+      <discussion>The resolv.conf (or equivalent) file configures the system's DNS resolver.  DNS is used to resolve host names to IP addresses.  If DNS configuration is modified maliciously, host name resolution may fail or return incorrect information.  DNS may be used by a variety of system security functions, such as time synchronization, centralized authentication, and remote system logging.</discussion>
+      <check_content>Check the mode of the /etc/resolv.conf file.
+
+      Procedure:
+      # ls -l /etc/resolv.conf
+      If the file mode is more permissive than 0644, this is a finding.</check_content>
+      <fix_text>Change the mode of the /etc/resolv.conf file to 0644 or less permissive.
+
+      # chmod 0644 /etc/resolv.conf</fix_text>
+
+- name: V-22321 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22321
+      The /etc/resolv.conf file must have mode 0644 or less permissive.
+      If the file mode is more permissive than 0644, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }} 
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/etc/resolv.conf  is not more permissive than 0644</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stat.mode == "0644"
+
+  # Other options:"Ongoing", "Not Reviewed", or "Not Applicable"
+        
+- name: V-22321 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22321
+      The /etc/resolv.conf file must have mode 0644 or less permissive.
+      If the file mode is more permissive than 0644, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }} 
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>/etc/resolv.conf is more permissive than 0644</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stat.mode != "0644"
+
+- name: V-22321 Fix-1
+  ignore_errors: True
+  when: (checkmyconf2.stat.gid != 0 and FIX == 1)
+  file: path=/etc/resolv.conf group=root owner=root mode=0644 state=file

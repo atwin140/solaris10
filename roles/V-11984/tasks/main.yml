@@ -1,0 +1,116 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11984 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11984"
+      rule_id="SV-12485r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>All skeleton files and directories (typically in /etc/skel) must be owned by bin.</title>
+      <discussion>If the skeleton files are not protected, unauthorized personnel could change user startup parameters and possibly jeopardize user files.  Failure to give ownership of sensitive files or utilities to bin provides the designated owner and unauthorized users with the potential to access sensitive information or change the system configuration which could weaken the system's security posture.</discussion>
+      <check_content>Check skeleton files ownership.
+      # ls -alL /etc/skel
+      If a skeleton file is not owned by bin, this is a finding.</check_content>
+      <fix_text>Change the ownership of skeleton files with incorrect mode.
+      # chown bin &lt;skeleton file&gt;</fix_text>
+
+
+- name: V-11984 Check
+  shell: ls -alL /etc/skel 2>&1
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11984 Check 2
+  shell: ls -la /etc/skel | awk '$1 !~ /^d|total/ && $3 !~ /bin/ {print "/etc/skel/"$9}' 2>&1
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11984 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11984
+      All skeleton files and directories (typically in /etc/skel) must be owned by bin.
+      If a skeleton file is not owned by bin, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>All the skeleton files are owned by bin</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+      
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-11984 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11984
+      All skeleton files and directories (typically in /etc/skel) must be owned by bin.
+      If a skeleton file is not owned by bin, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>NOT All the skeleton files are owned by bin</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-11984 Fix-1
+  file: path="{{item}}" group=root owner=bin mode=0644 state=file
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

@@ -1,0 +1,118 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12032 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12032"
+      rule_id="SV-12533r2_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>Hidden extended file attributes must not exist on the system.</title>
+      <discussion>Solaris extended attributes are essentially files themselves that are of an arbitrary size and content.  They could be used to hide files from ordinary system file scans.</discussion>
+      <check_content>Search for all files with hidden extended attributes.
+
+      # find / -xattr -print -exec runat {} ls -al \;
+
+      If hidden extended file attributes exist, this is a finding.
+      </check_content>
+      <fix_text>Remove the hidden extended file attributes.
+      # runat &lt;file name&gt; rm &lt;attribute name&gt;
+      </fix_text>
+
+- name: V-12032 Check
+  shell: find /  -fstype nfs -prune -o -fstype objfs -prune -o -fstype proc -prune -type f -xattr -print -exec runat {} ls -al \;
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12032 Check 2
+  shell: find /  -fstype nfs -prune -o -fstype objfs -prune -o -fstype proc -prune -type f -xattr -print -exec runat {} ls -al \;
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12032 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12032
+      Hidden extended file attributes must not exist on the system.
+      If hidden extended file attributes exist, this is a finding.
+      Procedure:
+      # find /  -fstype nfs -prune -o -fstype objfs -prune -o -fstype proc -prune -type f -xattr -print -exec runat {} ls -al \;
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>No hidden extended file attributes exist</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000032</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-12032 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12032
+      Hidden extended file attributes must not exist on the system.
+      If hidden extended file attributes exist, this is a finding.
+      Procedure:
+      # find /  -fstype nfs -prune -o -fstype objfs -prune -o -fstype proc -prune -type f -xattr -print -exec runat {} ls -al \;
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>Hidden extended file attributes exist</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000032</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""

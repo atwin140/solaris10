@@ -1,0 +1,138 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22302 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22302"
+      rule_id="SV-26318r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must enforce compliance of the entire password during authentication.</title>
+      <discussion>Some common password hashing schemes only process the first eight characters of a user's password, which reduces the effective strength of the password.</discussion>
+      <check_content>Verify no password hash in /etc/passwd or /etc/shadow begins with a character other than an underscore (_) or dollar sign ($).
+
+      # cut -d ':' -f2 /etc/passwd | egrep -v '^[*!$_]'
+      # cut -d ':' -f2 /etc/shadow | egrep -v '^[*!$_]'
+
+      If any unlocked password hash is present without an initial underscore (_) or dollar sign ($) character, this is a finding.</check_content>
+      <fix_text>Edit /etc/security/policy.conf and add or change the CRYPT_DEFAULT setting to something other than __unix__, such as 6.  Allowable values for CRYPT_DEFAULT may be found in the /etc/security/crypt.conf file.
+
+      Change any passwords using non-compliant hashes.</fix_text>
+
+- name: V-22302 Check
+  shell:  awk '/^CRYPT_DEFAULT/ {print "From /etc/security/policy.conf = "$0}' /etc/security/policy.conf; cut -d ':' -f2 /etc/passwd | egrep -v '^[*!$_]'; cut -d ':' -f2 /etc/shadow | egrep -v '^[*!$_]'
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22302 Check 2
+  shell: awk "-F:" '$2 !~/^\$|NP|\*|^_/ {print $1}' /etc/shadow
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22302 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22302
+      The system must enforce compliance of the entire password during authentication.
+      If any unlocked password hash is present without an initial underscore (_) or dollar sign ($) character, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>All accounts that are not locked have appropriate hashes</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22302 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22302
+      The system must enforce compliance of the entire password during authentication.
+      If any unlocked password hash is present without an initial underscore (_) or dollar sign ($) character, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>NOT All accounts that are not locked have appropriate hashes</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+
+- name: V-22302 Fix-1
+  lineinfile: dest=/etc/security/policy.conf state=present regexp=^CRYPT_DEFAULT line="CRYPT_DEFAULT=6"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)
+
+
+- name: V-22302 Fix-2 - Change users password
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)
+  user: name="{{item}}" update_password=always password=$6$tzxg/k0gWq457/0u$2XyO.9UUs5T.XsgD2.1L6BILXA2hrNbdquDSVkKaSOASXiuOvguVi4nRCcpEnJY5qRmVRc3nGhgZNWRpddm1L0
+#  shell:  FFF
+#  args:
+#    executable: /bin/bash
+#  file: path="{{item}}" group=FFF owner=FFF mode=FFF state=present
+  with_items: "{{checkmyconf2.stdout_lines}}"
+
+#- service: name=FFF state=restarted
+#  when: (checkmyconf2.stdout == "" and FIX == 1)
+
+#  stat: path="FFF"
+#  when: (checkmyconf2.stat.mode >="0751" and FIX == 1)
+

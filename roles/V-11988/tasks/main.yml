@@ -1,0 +1,113 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11988 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11988"
+      rule_id="SV-40332r1_rule"
+      raw_risk="I"
+      datetime="{{ ansible_date_time.date }}">
+      <title>There must be no .rhosts, .shosts, hosts.equiv, or shosts.equiv files on the system.</title>
+      <discussion>The .rhosts, .shosts, hosts.equiv, and shosts.equiv files are used to configure host-based authentication for individual users or the system.  Host-based authentication is not sufficient for preventing unauthorized access to the system.</discussion>
+      <check_content>Check for the existence of the files.  The .rhosts and .shosts files are stored in home directories.  (If a user does not have a home directory assigned in /etc/passwd, the root directory (/) is assigned as a default home directory.)
+
+      Procedure (the first command is five lines long):
+      # for homedir in `cut -d: -f6 /etc/passwd | awk '$1 == "" {$1 = "/"} {print $1}'`;
+      do
+      ls -l $homedir/.rhosts;
+      ls -l $homedir/.shosts;
+      done
+      # ls -l /etc/hosts.equiv
+      # ls -l /etc/ssh/shosts.equiv
+
+      If .rhosts, .shosts, hosts.equiv, or shosts.equiv are found, this is a finding.</check_content>
+      <fix_text>Remove the .rhosts, .shosts, hosts.equiv, and/or shosts.equiv files.
+      </fix_text>
+
+- name: V-11988 Check
+  shell: ls / | while read DIR; do find /$DIR  -fstype nfs -prune -o -fstype objfs -prune -o -fstype proc -prune -type f -name .rhosts -name .shosts -name hosts.equiv -name shosts.equiv -exec grep + {} \; ; grep + /etc/passwd  /etc/shadow /etc/group
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11988 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11988
+      The .rhosts, .shosts, hosts.equiv, shosts.equiv, /etc/passwd, /etc/shadow, and/or /etc/group files must not contain a plus (+) without defining entries for NIS+ netgroups.
+      If the .rhosts, .shosts, hosts.equiv, shosts.equiv, /etc/passwd, /etc/shadow, and/or /etc/group files contain a plus (+) and do not define entries for NIS+ netgroups, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>There are no .rhosts and .shosts files in the home directories and there are no  /etc/hosts.equiv </comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf1.stdout == "" and REPORT == 1)
+
+- name: V-11988 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11988
+      The .rhosts, .shosts, hosts.equiv, shosts.equiv, /etc/passwd, /etc/shadow, and/or /etc/group files must not contain a plus (+) without defining entries for NIS+ netgroups.
+      If the .rhosts, .shosts, hosts.equiv, shosts.equiv, /etc/passwd, /etc/shadow, and/or /etc/group files contain a plus (+) and do not define entries for NIS+ netgroups, this is a finding.
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>There are .rhosts and .shosts files in the home directories and there are no  /etc/hosts.equiv </comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000366</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf1.stdout != ""

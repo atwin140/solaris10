@@ -1,0 +1,79 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12003 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12003"
+      rule_id="SV-28618r3_rule"
+      raw_risk="III"
+      datetime="{{ ansible_date_time.date }}">
+      <title>A separate file system must be used for user home directories (such as /home or equivalent).</title>
+      <discussion>The use of separate file systems for different paths can protect the system from failures resulting from a file system becoming full or failing.</discussion>
+      <check_content>Determine if the /export/home path is a separate file system.
+
+      # grep /export/home /etc/vfstab
+
+      If no result is returned, /export/home is not on a separate file system and this is a finding.
+
+      If ZFS is used for home directories, this is not applicable.</check_content>
+      <fix_text>Migrate the /export/home path onto a separate file system.</fix_text>
+
+- name: V-12002 Check 
+  shell: grep /export/home /etc/vfstab 2>&1
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12003 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12003
+      A separate file system must be used for user home directories (such as /home or equivalent).
+      If no result is returned, /export/home is not on a separate file system and this is a finding.
+      If ZFS is used for home directories, this is not applicable.
+
+      All systems are on ZFS
+
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>ALL systems are on ZFS</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-001208</cci>
+      </ccis>
+      </finding>
+   
+

@@ -1,0 +1,120 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-22339 Check
+  shell: ls -lL /etc/shadow 2>&1
+  args:
+    executable: /bin/bash
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22339 Check 2
+  stat: path=/etc/shadow 
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22339 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding 
+      v_id="V-22339"
+      rule_id="SV-39900r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The /etc/shadow file (or equivalent) must be group-owned by root, bin, or sys.</title>
+      <discussion>The /etc/shadow file contains the list of local system accounts.  It is vital to system security and must be protected from unauthorized modification.  The file also contains password hashes which must not be accessible to users other than root.</discussion>
+      <check_content>Check the ownership of the /etc/shadow file.
+
+      Procedure:
+      # ls -lL /etc/shadow
+
+      If the file is not group-owned by root, bin, or sys, this is a finding.</check_content>
+      <fix_text>Change the group owner of the /etc/shadow file.
+
+      Procedure:
+      # chgrp root /etc/shadow</fix_text>
+
+- name: V-22339 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22339
+      The /etc/shadow file (or equivalent) must be group-owned by root, bin, or sys.
+      If the file is not group-owned by root, bin, or sys, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>/etc/shadow is group owned by root</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stat.gid == 0
+
+  # Other options:"Ongoing", "Not Reviewed", or "Not Applicable"
+        
+- name: V-22339 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22339
+      The /etc/shadow file (or equivalent) must be group-owned by root, bin, or sys.
+      If the file is not group-owned by root, bin, or sys, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>/etc/shadow is NOT group owned by root</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stat.gid != 0
+
+- name: V-22339 Fix-1
+  ignore_errors: True
+  when: (checkmyconf2.stat.gid != 0 and FIX == 1)
+  file: path=/etc/shadow group=root owner=root mode=0644 

@@ -1,0 +1,123 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-12033 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-12033"
+      rule_id="SV-12534r2_rule"
+      raw_risk="I"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The root account must be the only account with GID of 0.</title>
+      <discussion>Accounts with a GID of 0 have root group privileges.</discussion>
+      <check_content>Check passwd and group files for non-root user ids and group ids with a GID of 0.
+
+      # more /etc/passwd 
+      # more /etc/group
+
+      OR
+
+      # awk -F: '$4 == 0' /etc/passwd
+      # awk -F: '$3 == 0' /etc/group
+
+      Confirm the only account with a group id of 0 is root.
+
+      If the root account is not the only account with GID of 0, this is a finding.
+      </check_content>
+      <fix_text>Change the default GID of non-root accounts to a valid GID other than 0.
+      </fix_text>
+
+- name: V-12033 Check
+  shell: awk "-F:" '$4 == 0' /etc/passwd; awk "-F:" '$3 == 0' /etc/group
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12033 Check 2
+  shell: awk "-F:" '$4 == 0' /etc/passwd | awk '!/root/'; awk "-F:" '$3 == 0' /etc/group | awk '!/root/'
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-12033 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12033
+      The root account must be the only account with GID of 0.
+      If the root account is not the only account with GID of 0, this is a finding.
+      
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>There are no non-root user ids and group ids with a GID of 0</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      <cci>CCI-000764</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-12033 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-12033
+      The root account must be the only account with GID of 0.
+      If the root account is not the only account with GID of 0, this is a finding.
+      
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>There are non-root user ids and group ids with a GID of 0</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      <cci>CCI-000764</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""

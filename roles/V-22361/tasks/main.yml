@@ -1,0 +1,130 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+- name: V-22361 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-22361"
+      rule_id="SV-37101r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>Local initialization files must be group-owned by the user's primary group or root.</title>
+      <discussion>Local initialization files are used to configure the user's shell environment upon login.  Malicious modification of these files could compromise accounts upon logon.</discussion>
+      <check_content>Check user home directories for local initialization files group-owned by a group other than the user's primary group or root.
+      1. List user accounts and their primary GID.
+      # cut -d : -f 1,4 /etc/passwd
+
+      2. Check local initialization files for each user.
+      # ls -al /&lt;usershomedirectory&gt;/.login
+      # ls -al /&lt;usershomedirectory&gt;/.cshrc
+      # ls -al /&lt;usershomedirectory&gt;/.logout
+      # ls -al /&lt;usershomedirectory&gt;/.profile
+      # ls -al /&lt;usershomedirectory&gt;/.bash_profile
+      # ls -al /&lt;usershomedirectory&gt;/.bashrc
+      # ls -al /&lt;usershomedirectory&gt;/.bash_logout
+      # ls -al /&lt;usershomedirectory&gt;/.env
+      # ls -al /&lt;usershomedirectory&gt;/.dtprofile
+      # ls -al /&lt;usershomedirectory&gt;/.dispatch
+      # ls -al /&lt;usershomedirectory&gt;/.emacs
+      # ls -al /&lt;usershomedirectory&gt;/.exrc
+      # find /&lt;usershomedirectory&gt;/.dt ! -fstype nfs ! -group &lt;primary_group&gt; -exec ls -ld {} \;
+
+      3. If any file is not group-owned by root or the user's primary GID, this is a finding.
+
+      </check_content>
+      <fix_text>Change the group-owner of the local initialization file to the user's primary group, or root.
+      # chgrp [USER's primary GID] ~USER/[local initialization file]   </fix_text>
+
+- name: V-22361 Check
+  shell: awk "-F:" '$3 > 100 && $7 !~ /false/ && $6 !~ /\/$/ {print $4 " "$1 "  " $6}' /etc/passwd  | while read GRUP USER HOME; do printf $HOME" "$USER" "$GRUP" "; awk "-F:" '/'$USER'/ {print $3"|"var}' var=$GRUP /etc/group | paste -s -d\| -;  done | while read HOME USER GRUP UGRP; do find $HOME -exec ls -ldn {} \; 2>/dev/null | awk '$4 !~ /'$UGRP'/ {print  user ":" grup "   " $0}' user=$USER grup=$GRUP 2>/dev/null;  done
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22361 Check 2
+  shell: awk "-F:" '$3 > 100 && $7 !~ /false/ && $6 !~ /\/$/ && $1 !~ /ldap/  {print $4 " "$1 "  " $6}' /etc/passwd  | while read GRUP USER HOME; do printf $HOME" "$USER" "$GRUP" "; awk "-F:" '/'$USER'/ {print $3"|"var}' var=$GRUP /etc/group | paste -s -d\| -;  done | while read HOME USER GRUP UGRP; do find $HOME -exec ls -ldn {} \; 2>/dev/null | awk '$4 !~ /'$UGRP'|root/ {print "chown " user ":" grup " " $9}' user=$USER grup=$GRUP 2>/dev/null;  done
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-22361 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22361
+      Local initialization files must be group-owned by the user's primary group or root.
+      If any file is not group-owned by root or the user's primary GID, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -
+      </output>
+      <comments>Files and directories are group owned by user's primary group</comments>
+      <status>Not a Finding</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: (checkmyconf2.stdout == "" and REPORT == 1)
+
+- name: V-22361 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-22361
+      Local initialization files must be group-owned by the user's primary group or root.
+      If any file is not group-owned by root or the user's primary GID, this is a finding.
+
+      <![CDATA[
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>Files and directories are NOT group owned by user's primary group</comments>
+      <status>Ongoing</status>
+      <ccis>
+      <cci>CCI-000225</cci>
+      </ccis>
+      </finding>
+  when: checkmyconf2.stdout != ""
+
+- name: V-22361 Fix-1
+  shell:  "{{item}}"
+  with_items: "{{checkmyconf2.stdout_lines}}"
+  ignore_errors: True
+  when: (checkmyconf2.stdout != "" and FIX == 1)

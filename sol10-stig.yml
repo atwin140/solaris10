@@ -1,0 +1,234 @@
+- hosts: all
+  vars:
+    output_path: /audit/admin/stigs/sol10/
+    out_file: "{{output_path}}{{ansible_hostname}}.xml"
+    FIX: 1
+    REPORT: 1
+
+
+  roles:
+    - role: prep
+    - role: V-756
+    - role: V-760
+    - role: V-761
+    - role: V-762
+    - role: V-763
+    - role: V-765
+    - role: V-766
+    - role: V-768
+    - role: V-769
+    - role: V-770
+    - role: V-773
+    - role: V-774
+    - role: V-775
+    - role: V-776
+    - role: V-777
+    - role: V-778
+    - role: V-780
+    - role: V-781
+    - role: V-782
+    - role: V-783
+    - role: V-784
+    - role: V-786
+    - role: V-787
+    - role: V-788
+    - role: V-789
+    - role: V-790
+    - role: V-791
+    - role: V-792
+    - role: V-793
+    - role: V-794
+    - role: V-795
+    - role: V-796
+    - role: V-797
+    - role: V-798
+    - role: V-1010
+    - role: V-1011
+    - role: V-1013
+    - role: V-1026
+    - role: V-1030
+    - role: V-1032
+    - role: V-1046
+    - role: V-1048
+    - role: V-1062
+    - role: V-4083
+    - role: V-4087
+    - role: V-4089
+    - role: V-4090
+    - role: V-4091
+    - role: V-4246
+    - role: V-4247
+    - role: V-4249
+    - role: V-4250
+    - role: V-4269
+    - role: V-4298
+    - role: V-4300
+    - role: V-4301
+    - role: V-4309
+    - role: V-4312
+    - role: V-4313
+    - role: V-4353
+    - role: V-4357
+    - role: V-4360
+    - role: V-4361
+    - role: V-4364
+    - role: V-4365
+    - role: V-4366
+    - role: V-4371
+    - role: V-4382
+    - role: V-4384
+    - role: V-4392
+    - role: V-4395
+    - role: V-4397
+    - role: V-4398
+    - role: V-4399
+    - role: V-4427
+    - role: V-4689
+    - role: V-4690
+    - role: V-4691
+    - role: V-4692
+    - role: V-4693
+    - role: V-4694
+    - role: V-4695
+    - role: V-4696
+    - role: V-4697
+    - role: V-4702
+    - role: V-11940
+    - role: V-11941
+    - role: V-11945
+    - role: V-11946
+    - role: V-11947
+    - role: V-11948  #____________________________________________________________________________________________________________________________________
+    - role: V-11972
+    - role: V-11973
+    - role: V-11975
+    - role: V-11976
+    - role: V-11977
+    - role: V-11979
+    - role: V-11980
+    - role: V-11981
+    - role: V-11982
+    - role: V-11983
+    - role: V-11984
+    - role: V-11985
+    - role: V-11986
+    - role: V-11987
+    - role: V-11988
+    - role: V-11989
+    - role: V-11990
+    - role: V-11994
+    - role: V-11995
+    - role: V-11996
+    - role: V-11997
+    - role: V-11999
+    - role: V-12001
+    - role: V-12002
+    - role: V-12004
+    - role: V-12005
+    - role: V-12006
+    - role: V-12010         #FTP is not fixed with Ansible It can be but oppted not to as FTP is needed on some systems
+    - role: V-12011
+    - role: V-12014
+    - role: V-12016
+    - role: V-12017
+    - role: V-12018
+    - role: V-12019
+    - role: V-12020
+    - role: V-12021
+    - role: V-12022
+    - role: V-12023
+    - role: V-12024
+    - role: V-12025
+    - role: V-12026
+    - role: V-12028
+    - role: V-12030
+    - role: V-12031
+    - role: V-12032
+    - role: V-12033
+    - role: V-12049         #Not Fixed with Ansible
+    - role: V-12765
+    - role: V-22290
+    - role: V-22291
+    - role: V-22292
+    - role: V-22297
+    - role: V-22296         # Includes V-22294 V-22295
+    - role: V-22299
+    - role: V-22302
+    - role: V-22303
+    - role: V-22304
+    - role: V-22306
+    - role: V-22307
+    - role: V-22308
+    - role: V-22309
+    - role: V-22310
+    - role: V-22311
+    - role: V-22312
+    - role: V-22313
+    - role: V-22314
+    - role: V-22315
+    - role: V-22316
+    - role: V-22317
+    - role: V-22318
+    - role: V-22319
+    - role: V-22320
+    - role: V-22321
+    - role: V-22322
+    - role: V-22323
+    - role: V-22324
+    - role: V-22325
+    - role: V-22326
+    - role: V-22327
+    - role: V-22328
+    - role: V-22329
+    - role: V-22330
+    - role: V-22332
+    - role: V-22333
+    - role: V-22334
+    - role: V-22335
+    - role: V-22336
+    - role: V-22337
+    - role: V-22338
+    - role: V-22339
+    - role: V-22340
+    - role: V-22347
+    - role: V-22348
+    - role: V-22350
+    - role: V-22351
+    - role: V-22352
+    - role: V-22353
+    - role: V-22354
+    - role: V-22355
+    - role: V-22356
+    - role: V-22357
+    - role: V-22358
+    - role: V-22359
+    - role: V-22360
+    - role: V-22361
+    - role: V-22362
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    - role: post

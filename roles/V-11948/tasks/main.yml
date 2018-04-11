@@ -1,0 +1,114 @@
+###############################################
+# Developed For 7.2.4 by Andrew Darley     
+#     andrew.darley.ctr@navy.mil  
+#      
+# Originally created for:
+# Solaris 10 x86/SPARC Manual STIG - Ver 1
+# Release: 19 Benchmark Date: 28 Jul 2017
+# 
+# This is expected to run with a play book that
+# defines these variables
+# output_path
+# out_file
+# FIX
+###############################################
+
+
+- name: V-11948 Finding Open Tags
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <finding
+      v_id="V-11948"
+      rule_id="SV-27115r1_rule"
+      raw_risk="II"
+      datetime="{{ ansible_date_time.date }}">
+      <title>The system must require passwords to contain at least one uppercase alphabetic character.</title>
+      <discussion>To enforce the use of complex passwords, minimum numbers of characters of different classes are mandated.  The use of complex passwords reduces the ability of attackers to successfully obtain valid passwords using guessing or exhaustive search techniques.  Complexity requirements increase the password search space by requiring users to construct passwords from a larger character set than they may otherwise use.</discussion>
+      <check_content>Check the MINUPPER setting.
+      # egrep MINUPPER /etc/default/passwd
+      If MINUPPER is not set to 1 or more, this is a finding.</check_content>
+      <fix_text>Edit /etc/default/passwd and set the MINUPPER setting to at least 1.</fix_text>
+
+- name: V-11948 Check
+  shell: awk '/MINUPPER/' /etc/default/passwd
+  register: checkmyconf1
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11948 Check 2
+  shell: awk '/MINUPPER/' /etc/default/passwd
+  register: checkmyconf2
+  ignore_errors: True
+  changed_when: False
+
+- name: V-11948 Pass
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output>
+      V-11948
+      The system must require passwords to contain at least one uppercase alphabetic character.
+      If MINUPPER is not set to 1 or more, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>-
+      This is NOT a finding
+      -  
+      </output>
+      <comments>MINUPPER is set equal to or higher than 1 </comments>
+      <status>Not a Finding</status>
+      <ccis>
+        <cci>CCI-000192</cci>
+      </ccis>
+      </finding>
+  
+  when: (checkmyconf2.stdout != "" and REPORT == 1)
+
+- name: V-11948 Fail
+  blockinfile:
+    dest: "{{out_file}}"
+    state: present
+    marker: " "
+    block: |
+      <procedure> <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} ]]>
+      </procedure>
+      <output> 
+      V-11948
+      The system must require passwords to contain at least one uppercase alphabetic character.
+      If MINUPPER is not set to 1 or more, this is a finding.
+      <![CDATA[
+      Procedure: 
+      # {{ checkmyconf1.cmd }} 
+      OUTPUT:
+      ->  {{ checkmyconf1.stdout }}
+      ]]>====================================================================
+      This is a FINDING
+      -
+      </output>
+      <comments>MINUPPER is set equal to or higher than 1 </comments>
+      <status>Ongoing</status>
+      <ccis>
+        <cci>CCI-000192</cci>
+      </ccis>
+      </finding>
+  
+  when: checkmyconf2.stdout == ""
+
+- name: V-11948 Fix-1
+  lineinfile: dest=/etc/default/passwd state=present regexp=MINUPPER line="MINUPPER=1"
+  ignore_errors: True
+  when: (checkmyconf2.stdout == "" and FIX == 1)
